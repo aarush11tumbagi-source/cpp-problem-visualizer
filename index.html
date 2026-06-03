@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>C++ Problem Visualizer & Hint Engine</title>
+  <meta name="description" content="Paste any C++ programming problem, get visual algorithm diagrams and progressive coded hints." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* Purple-dominant dark palette */
+      --bg-primary:   #07050f;
+      --bg-secondary: #0d0a1a;
+      --bg-card:      #110d1f;
+      --bg-glass:     rgba(139,92,246,0.04);
+      --border:       rgba(139,92,246,0.13);
+      --border-hi:    rgba(139,92,246,0.28);
+
+      --purple:       #8b5cf6;
+      --purple-light: #a78bfa;
+      --purple-deep:  #6d28d9;
+      --purple-glow:  rgba(139,92,246,0.22);
+      --purple-soft:  rgba(139,92,246,0.08);
+
+      --white-hi:     rgba(255,255,255,0.88);
+      --white-mid:    rgba(255,255,255,0.55);
+      --white-dim:    rgba(255,255,255,0.22);
+      --white-ghost:  rgba(255,255,255,0.06);
+
+      /* toned-down green — used sparingly */
+      --sage:         rgba(110,200,160,0.55);
+      --sage-border:  rgba(110,200,160,0.18);
+
+      --text-primary:   #ede9fe;
+      --text-secondary: #9580c4;
+      --text-muted:     #4b3f6b;
+
+      --font-main: 'Inter', sans-serif;
+      --font-code: 'JetBrains Mono', monospace;
+
+      --r-sm: 8px; --r-md: 12px; --r-lg: 18px;
+      --transition: 0.26s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh; overflow-x: hidden;
+    }
+
+    /* atmosphere */
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse 60% 50% at 10% 10%, rgba(109,40,217,0.10) 0%, transparent 70%),
+        radial-gradient(ellipse 45% 40% at 90% 90%, rgba(139,92,246,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 30% 25% at 55% 5%,  rgba(167,139,250,0.05) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      position: relative; z-index: 10;
+      padding: 14px 34px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(7,5,15,0.88);
+      backdrop-filter: blur(20px);
+    }
+
+    .logo { display: flex; align-items: center; gap: 12px; }
+
+    .logo-icon {
+      width: 38px; height: 38px; border-radius: var(--r-sm);
+      background: linear-gradient(135deg, var(--purple-deep), var(--purple-light));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: 0 0 18px var(--purple-glow);
+    }
+
+    .logo-text h1 {
+      font-size: 16px; font-weight: 700;
+      background: linear-gradient(120deg, var(--purple-light), #ddd6fe);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .logo-text p { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.2px; margin-top: 1px; }
+
+    .header-right { display: flex; align-items: center; gap: 10px; }
+
+    .badge { padding: 3px 11px; border-radius: 20px; font-size: 10.5px; font-weight: 600; border: 1px solid; letter-spacing: 0.3px; }
+    .b-pu { background: var(--purple-soft); border-color: rgba(139,92,246,0.3); color: var(--purple-light); }
+    .b-wh { background: var(--white-ghost); border-color: var(--white-dim); color: var(--white-mid); }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: flex; align-items: center;
+      background: rgba(139,92,246,0.06); border: 1px solid var(--border);
+      border-radius: 24px; padding: 3px; gap: 2px;
+    }
+
+    .mode-btn {
+      padding: 5px 13px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 600;
+      cursor: pointer; border: none;
+      background: transparent; color: var(--text-muted);
+      font-family: var(--font-main); transition: var(--transition);
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, var(--purple-deep), var(--purple));
+      color: #fff; box-shadow: 0 0 12px var(--purple-glow);
+    }
+
+    /* ── LAYOUT ── */
+    main {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr;
+      height: calc(100vh - 63px); overflow: hidden;
+    }
+
+    .left-panel {
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 22px; gap: 13px; overflow-y: auto;
+    }
+
+    .panel-label {
+      font-size: 10.5px; font-weight: 600;
+      color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .panel-label::before {
+      content: ''; width: 3px; height: 12px; border-radius: 2px;
+      background: linear-gradient(var(--purple-light), var(--purple-deep));
+    }
+
+    textarea#problemInput {
+      flex: 1; min-height: 280px;
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 15px;
+      font-family: var(--font-main); font-size: 13px; line-height: 1.75;
+      color: var(--text-primary); resize: vertical; outline: none;
+      transition: var(--transition);
+    }
+
+    textarea#problemInput::placeholder { color: var(--text-muted); }
+    textarea#problemInput:focus {
+      border-color: rgba(139,92,246,0.4);
+      box-shadow: 0 0 0 3px rgba(139,92,246,0.07), inset 0 0 20px rgba(139,92,246,0.03);
+    }
+
+    .action-row { display: flex; gap: 8px; }
+
+    .btn {
+      padding: 10px 18px; border-radius: var(--r-sm);
+      font-family: var(--font-main); font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none; transition: var(--transition);
+      display: flex; align-items: center; gap: 7px;
+    }
+
+    .btn-primary {
+      flex: 1;
+      background: linear-gradient(135deg, var(--purple-deep), var(--purple));
+      color: #fff; box-shadow: 0 4px 18px var(--purple-glow);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 7px 26px var(--purple-glow); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: var(--bg-glass); border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover { border-color: var(--border-hi); color: var(--text-secondary); }
+
+    .samples-label { font-size: 11px; color: var(--text-muted); margin-bottom: 7px; }
+    .sample-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .chip {
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 500;
+      cursor: pointer; border: 1px solid var(--border);
+      background: transparent; color: var(--text-muted);
+      transition: var(--transition);
+    }
+    .chip:hover { border-color: var(--purple); color: var(--purple-light); background: var(--purple-soft); }
+
+    /* ── RIGHT PANEL ── */
+    .right-panel {
+      display: flex; flex-direction: column;
+      overflow-y: auto; padding: 22px; gap: 14px;
+    }
+
+    /* empty */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 14px; text-align: center; padding: 40px;
+    }
+    .empty-icon { font-size: 56px; animation: float 3.5s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-11px);} }
+    .empty-state h2 { font-size: 20px; font-weight: 700; color: var(--white-hi); }
+    .empty-state p  { font-size: 13px; color: var(--text-muted); max-width: 280px; line-height: 1.65; }
+
+    /* cards */
+    #analysisResult { display: none; flex-direction: column; gap: 13px; }
+
+    .card {
+      background: var(--bg-glass); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 16px;
+      animation: slideIn 0.32s ease;
+    }
+    @keyframes slideIn { from{opacity:0;transform:translateY(7px);} to{opacity:1;transform:translateY(0);} }
+
+    .card-title {
+      font-size: 10.5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      margin-bottom: 11px; display: flex; align-items: center; gap: 7px;
+    }
+
+    /* type card */
+    .type-card {
+      display: flex; align-items: center; gap: 13px;
+      padding: 15px 18px; border-radius: var(--r-lg);
+      background: var(--bg-glass); border: 1px solid var(--border);
+      animation: slideIn 0.32s ease;
+    }
+    .type-icon-wrap {
+      width: 46px; height: 46px; border-radius: var(--r-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .type-info h3 { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+    .type-info p  { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+    /* io flow */
+    .io-flow {
+      display: flex; align-items: center; gap: 9px;
+      background: var(--bg-secondary); border-radius: var(--r-sm);
+      padding: 13px; overflow-x: auto;
+    }
+    .io-box {
+      flex: 1; min-width: 85px; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: var(--r-sm); padding: 9px;
+    }
+    .io-box-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+    .io-box-val   { font-family: var(--font-code); font-size: 11.5px; color: var(--text-primary); white-space: pre-wrap; word-break: break-all; }
+    .io-arrow     { font-size: 16px; color: var(--text-muted); flex-shrink: 0; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    /* constraints */
+    .c-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .c-tag {
+      padding: 4px 10px; border-radius: 6px;
+      font-family: var(--font-code); font-size: 11px;
+      background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.2);
+      color: #fbbf24;
+    }
+    .cx-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 9px; }
+    .cx-b   { padding: 4px 11px; border-radius: 7px; font-size: 11px; font-weight: 600; font-family: var(--font-code); }
+
+    /* hints */
+    .hint-card {
+      border-radius: var(--r-md); overflow: hidden;
+      border: 1px solid var(--border); margin-bottom: 8px; animation: slideIn 0.28s ease;
+    }
+    .hint-hbtn {
+      width: 100%; padding: 11px 15px;
+      background: rgba(139,92,246,0.04);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; gap: 9px;
+      font-family: var(--font-main); color: var(--text-primary);
+      font-size: 13px; font-weight: 500; text-align: left;
+      transition: var(--transition);
+    }
+    .hint-hbtn:hover { background: rgba(139,92,246,0.08); }
+
+    .h-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10.5px; font-weight: 700; flex-shrink: 0;
+    }
+    .h-chev { margin-left: auto; font-size: 10px; transition: transform 0.26s; color: var(--text-muted); }
+    .hint-card.open .h-chev { transform: rotate(180deg); }
+
+    .hint-body {
+      display: none; padding: 11px 15px 14px;
+      background: rgba(0,0,0,0.28); font-size: 13px;
+      line-height: 1.72; color: var(--text-secondary);
+      border-top: 1px solid var(--border);
+    }
+    .hint-card.open .hint-body { display: block; }
+
+    .hint-body pre { margin-top: 9px; border-radius: var(--r-sm); overflow: auto; font-size: 12px; }
+    .hint-body code { font-family: var(--font-code); }
+
+    .mini-code {
+      margin-top: 9px;
+      background: #0d0820; border: 1px solid rgba(139,92,246,0.18);
+      border-radius: var(--r-sm); padding: 11px 13px;
+      font-family: var(--font-code); font-size: 12px;
+      color: #c4b5fd; line-height: 1.65; overflow-x: auto; white-space: pre;
+    }
+
+    .p-list { margin-top: 9px; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .p-list li { display: flex; gap: 8px; align-items: flex-start; }
+    .p-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--purple-light); margin-top: 7px; flex-shrink: 0; opacity: 0.5; }
+
+    .locked-row {
+      padding: 11px 15px; display: flex; align-items: center; gap: 9px;
+      background: rgba(139,92,246,0.02);
+    }
+    .lock-ic { font-size: 15px; opacity: 0.28; }
+    .locked-row span { font-size: 12.5px; color: var(--text-muted); }
+
+    .reveal-btn {
+      margin-left: auto; padding: 4px 12px;
+      border-radius: 6px; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: 1px solid; background: transparent;
+      transition: var(--transition); font-family: var(--font-main);
+    }
+    .reveal-btn:hover { opacity: 0.8; }
+
+    /* ── VISUAL SECTION ── */
+    .vis-card {
+      background: var(--bg-glass); border: 1px solid var(--border-hi);
+      border-radius: var(--r-md); overflow: hidden; animation: slideIn 0.32s ease;
+    }
+
+    .vis-header {
+      padding: 13px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(139,92,246,0.05);
+    }
+
+    .vis-title {
+      font-size: 10.5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--purple-light); display: flex; align-items: center; gap: 7px;
+    }
+
+    .vis-controls { display: flex; gap: 7px; align-items: center; }
+
+    .vis-play-btn {
+      padding: 5px 14px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(139,92,246,0.4);
+      background: rgba(139,92,246,0.12); color: var(--purple-light);
+      font-family: var(--font-main); transition: var(--transition);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .vis-play-btn:hover { background: rgba(139,92,246,0.22); box-shadow: 0 0 12px var(--purple-glow); }
+
+    .vis-stage {
+      padding: 20px 16px;
+      min-height: 180px; position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .vis-label {
+      position: absolute; bottom: 8px; left: 16px;
+      font-size: 10.5px; color: var(--text-muted); font-family: var(--font-code);
+    }
+
+    /* ── Array bars ── */
+    .bar-container { display: flex; align-items: flex-end; gap: 5px; height: 120px; }
+    .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .bar {
+      width: 28px; border-radius: 4px 4px 0 0;
+      background: var(--purple-soft); border: 1px solid rgba(139,92,246,0.25);
+      transition: all 0.4s ease; position: relative;
+    }
+    .bar.current { background: rgba(139,92,246,0.45); border-color: var(--purple); box-shadow: 0 0 10px var(--purple-glow); }
+    .bar.max-sub  { background: linear-gradient(180deg, var(--purple), var(--purple-deep)); border-color: var(--purple-light); }
+    .bar-val { font-size: 9.5px; color: var(--text-muted); font-family: var(--font-code); }
+
+    .scan-info {
+      position: absolute; top: 8px; right: 16px;
+      display: flex; gap: 10px;
+    }
+    .scan-pill {
+      padding: 3px 9px; border-radius: 6px;
+      font-size: 10.5px; font-family: var(--font-code); font-weight: 600;
+    }
+
+    /* ── Graph nodes ── */
+    #graphSvg { width: 100%; height: 180px; }
+
+    /* ── DP table ── */
+    .dp-table-wrap { overflow-x: auto; width: 100%; }
+    .dp-table { border-collapse: collapse; font-family: var(--font-code); font-size: 12px; margin: 0 auto; }
+    .dp-table th, .dp-table td {
+      width: 38px; height: 34px; text-align: center;
+      border: 1px solid var(--border);
+    }
+    .dp-table th { background: rgba(139,92,246,0.1); color: var(--purple-light); font-weight: 600; font-size: 10px; }
+    .dp-table td { background: var(--bg-card); color: var(--text-secondary); transition: all 0.35s; }
+    .dp-table td.filled { background: rgba(139,92,246,0.18); color: var(--white-hi); border-color: var(--border-hi); }
+    .dp-table td.current-cell { background: rgba(139,92,246,0.4); color: #fff; border-color: var(--purple); box-shadow: 0 0 8px var(--purple-glow); }
+
+    /* ── String chars ── */
+    .str-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .str-char {
+      width: 30px; height: 30px; border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-code); font-size: 13px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      transition: all 0.35s; color: var(--text-secondary);
+    }
+    .str-char.ptr-left  { border-color: var(--purple); background: rgba(139,92,246,0.2); color: #fff; box-shadow: 0 0 8px var(--purple-glow); }
+    .str-char.ptr-right { border-color: rgba(255,255,255,0.45); background: rgba(255,255,255,0.09); color: var(--white-hi); box-shadow: 0 0 8px rgba(255,255,255,0.1); }
+    .str-char.vowel     { border-color: rgba(139,92,246,0.35); color: var(--purple-light); }
+    .str-ptr-row { display: flex; gap: 4px; justify-content: center; margin-top: 4px; }
+    .ptr-label { width: 30px; text-align: center; font-size: 9px; color: var(--text-muted); font-family: var(--font-code); }
+
+    /* ── Two pointer ── */
+    .tp-arr { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+    .tp-cell {
+      width: 34px; height: 34px; border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-code); font-size: 12.5px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      transition: all 0.35s; color: var(--text-secondary);
+    }
+    .tp-cell.left  { border-color: var(--purple); background: rgba(139,92,246,0.2); color: #fff; box-shadow: 0 0 8px var(--purple-glow); }
+    .tp-cell.right { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.08); color: var(--white-hi); }
+    .tp-cell.found { border-color: var(--sage); background: rgba(110,200,160,0.12); color: #a7f3d0; box-shadow: 0 0 8px rgba(110,200,160,0.2); }
+
+    /* ── Binary search ── */
+    .bs-arr { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+    .bs-cell {
+      width: 36px; height: 34px; border-radius: var(--r-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-code); font-size: 12px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      transition: all 0.35s; color: var(--text-secondary);
+    }
+    .bs-cell.active-range { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.25); color: var(--purple-light); }
+    .bs-cell.mid-cell     { background: rgba(139,92,246,0.4); border-color: var(--purple); color: #fff; box-shadow: 0 0 8px var(--purple-glow); }
+    .bs-cell.eliminated   { opacity: 0.22; }
+    .bs-cell.found        { background: rgba(110,200,160,0.15); border-color: var(--sage-border); color: #a7f3d0; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.15); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(139,92,246,0.28); }
+
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.15); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    .toast { position: fixed; bottom: 20px; right: 20px; background: var(--bg-card); border: 1px solid var(--border-hi); border-radius: var(--r-md); padding: 11px 17px; font-size: 13px; display: flex; align-items: center; gap: 8px; box-shadow: 0 6px 28px rgba(0,0,0,0.5), 0 0 18px var(--purple-glow); z-index: 9999; animation: slideIn 0.28s ease; transition: opacity 0.3s; }
+
+    /* lang toggle */
+    .lang-toggle {
+      display: flex; align-items: center;
+      background: rgba(139,92,246,0.06); border: 1px solid var(--border);
+      border-radius: 24px; padding: 3px; gap: 2px;
+    }
+    .lang-btn {
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      cursor: pointer; border: none;
+      background: transparent; color: var(--text-muted);
+      font-family: var(--font-code); letter-spacing: 0.4px;
+      transition: var(--transition);
+    }
+    .lang-btn.active {
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff; box-shadow: 0 0 10px rgba(59,130,246,0.35);
+    }
+    .lang-btn#langC.active    { background: linear-gradient(135deg, #7c2d12, #ea580c); box-shadow: 0 0 10px rgba(234,88,12,0.3); }
+    .lang-btn#langJava.active { background: linear-gradient(135deg, #854d0e, #ca8a04); box-shadow: 0 0 10px rgba(202,138,4,0.3); }
+    .lang-btn#langPy.active   { background: linear-gradient(135deg, #1a3a1a, #16a34a); box-shadow: 0 0 10px rgba(22,163,74,0.35); }
+
+    /* ── CODE REVIEW PANEL ── */
+    .review-card {
+      background: var(--bg-glass); border: 1px solid var(--border-hi);
+      border-radius: var(--r-md); overflow: hidden; animation: slideIn 0.32s ease;
+    }
+    .review-header {
+      padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;
+      background: rgba(139,92,246,0.05); border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .review-title {
+      font-size: 10.5px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: #f472b6; display: flex; align-items: center; gap: 7px;
+    }
+    .review-toggle-icon { font-size: 11px; color: var(--text-muted); transition: transform 0.28s; }
+    .review-card.open .review-toggle-icon { transform: rotate(180deg); }
+    .review-body { display: none; padding: 16px; flex-direction: column; gap: 14px; }
+    .review-card.open .review-body { display: flex; }
+
+    .review-input {
+      width: 100%; min-height: 140px;
+      background: rgba(0,0,0,0.3); border: 1px solid var(--border);
+      border-radius: var(--r-sm); padding: 12px 14px;
+      font-family: var(--font-code); font-size: 12.5px; line-height: 1.7;
+      color: #ddd6fe; resize: vertical; outline: none;
+      transition: var(--transition);
+    }
+    .review-input:focus { border-color: rgba(244,114,182,0.4); box-shadow: 0 0 0 3px rgba(244,114,182,0.07); }
+    .review-input::placeholder { color: var(--text-muted); }
+
+    .review-run-btn {
+      align-self: flex-start; padding: 9px 20px;
+      border-radius: var(--r-sm); font-size: 12.5px; font-weight: 600;
+      cursor: pointer; border: none;
+      background: linear-gradient(135deg, #be185d, #f472b6);
+      color: #fff; font-family: var(--font-main);
+      box-shadow: 0 4px 16px rgba(244,114,182,0.28);
+      transition: var(--transition); display: flex; align-items: center; gap: 7px;
+    }
+    .review-run-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(244,114,182,0.4); }
+
+    /* score ring */
+    .score-section { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+    .score-ring-wrap { position: relative; width: 88px; height: 88px; flex-shrink: 0; }
+    .score-ring-wrap svg { transform: rotate(-90deg); }
+    .score-ring-center {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .score-pct { font-size: 20px; font-weight: 800; color: var(--white-hi); }
+    .score-pct-label { font-size: 8.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+    .score-breakdown { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 160px; }
+    .score-bar-row { display: flex; flex-direction: column; gap: 3px; }
+    .score-bar-label { font-size: 11px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+    .score-bar-track { height: 5px; background: rgba(255,255,255,0.07); border-radius: 3px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
+
+    /* annotated code */
+    .annot-code { border-radius: var(--r-sm); overflow: hidden; border: 1px solid var(--border); }
+    .annot-line {
+      display: flex; gap: 0; font-family: var(--font-code); font-size: 12px;
+      line-height: 1.65; min-height: 22px;
+    }
+    .annot-line .ln {
+      min-width: 32px; padding: 0 8px;
+      background: rgba(0,0,0,0.3); color: var(--text-muted);
+      font-size: 10.5px; display: flex; align-items: center; justify-content: flex-end;
+      border-right: 1px solid rgba(255,255,255,0.05); flex-shrink: 0; user-select: none;
+    }
+    .annot-line .lc { padding: 0 12px; color: #ddd6fe; flex: 1; overflow-x: auto; white-space: pre; }
+    .annot-line.good   { background: rgba(22,163,74,0.08); }
+    .annot-line.good .ln { background: rgba(22,163,74,0.12); color: #86efac; }
+    .annot-line.warn   { background: rgba(251,191,36,0.07); }
+    .annot-line.warn .ln { background: rgba(251,191,36,0.1); color: #fde68a; }
+    .annot-line.error  { background: rgba(239,68,68,0.09); }
+    .annot-line.error .ln { background: rgba(239,68,68,0.14); color: #fca5a5; }
+    .annot-line .lc.good  { color: #86efac; }
+    .annot-line .lc.warn  { color: #fde68a; }
+    .annot-line .lc.error { color: #fca5a5; }
+
+    /* issue list */
+    .issue-list { display: flex; flex-direction: column; gap: 7px; }
+    .issue-item {
+      padding: 8px 12px; border-radius: var(--r-sm);
+      font-size: 12px; display: flex; gap: 10px; align-items: flex-start;
+    }
+    .issue-item.err  { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #fca5a5; }
+    .issue-item.wrn  { background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.18); color: #fde68a; }
+    .issue-item.good { background: rgba(22,163,74,0.07); border: 1px solid rgba(22,163,74,0.18); color: #86efac; }
+    .issue-item.info { background: rgba(139,92,246,0.07); border: 1px solid rgba(139,92,246,0.2); color: #c4b5fd; }
+    .issue-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; height: auto; overflow: visible; }
+      .left-panel { border-right: none; border-bottom: 1px solid var(--border); max-height: 55vh; }
+      header { padding: 12px 16px; }
+      .left-panel, .right-panel { padding: 16px; }
+      .mode-toggle, .lang-toggle { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🧠</div>
+    <div class="logo-text">
+      <h1>C++ Problem Visualizer</h1>
+      <p>Paste · Analyze · Visualize · Solve</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="mode-toggle" id="modeToggle">
+      <button class="mode-btn active" id="modeHint" onclick="setMode('hint')">💡 Hint</button>
+      <button class="mode-btn"        id="modeFull" onclick="setMode('full')">✅ Full</button>
+    </div>
+    <!-- Language selector -->
+    <div class="lang-toggle" id="langToggle">
+      <button class="lang-btn active" id="langCpp"  onclick="setLang('cpp')">C++</button>
+      <button class="lang-btn"        id="langC"    onclick="setLang('c')">C</button>
+      <button class="lang-btn"        id="langJava" onclick="setLang('java')">Java</button>
+      <button class="lang-btn"        id="langPy"   onclick="setLang('py')">Python</button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main>
+
+  <!-- LEFT -->
+  <section class="left-panel">
+    <div class="panel-label">Problem Input</div>
+
+    <textarea id="problemInput" rows="11"
+      placeholder="📋  Paste your C++ problem here...
+
+Example:
+Given an array of N integers, find the
+maximum sum of a contiguous subarray.
+
+Input:  N=5, arr[]={-2,1,-3,4,-1}
+Output: 4
+
+Constraints:
+1 ≤ N ≤ 10^5"></textarea>
+
+    <div class="action-row">
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeNow()">
+        <span id="btnIcon">⚡</span>
+        <span id="btnText">Analyze Problem</span>
+        <div id="btnSpinner" class="spinner" style="display:none;"></div>
+      </button>
+      <button class="btn btn-ghost" onclick="clearAll()" title="Clear">🗑</button>
+    </div>
+
+    <div>
+      <div class="samples-label">🎯 Try a sample:</div>
+      <div class="sample-chips">
+        <div class="chip" onclick="loadSample('array')">Kadane's Array</div>
+        <div class="chip" onclick="loadSample('string')">Vowel Reverse</div>
+        <div class="chip" onclick="loadSample('dp')">Coin Change DP</div>
+        <div class="chip" onclick="loadSample('graph')">BFS Path</div>
+        <div class="chip" onclick="loadSample('twoptr')">Two Sum</div>
+        <div class="chip" onclick="loadSample('sort')">Binary Search</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RIGHT -->
+  <section class="right-panel" id="rightPanel">
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🔮</div>
+      <h2>Ready to Visualize</h2>
+      <p>Paste any C++ problem, pick <strong>Hint Only</strong> or <strong>Full Answer</strong>, then hit Analyze.</p>
+    </div>
+
+    <div id="analysisResult">
+
+      <!-- Type card -->
+      <div class="type-card" id="typeCard"></div>
+
+      <!-- Breakdown -->
+      <div class="card" id="breakdownCard" style="display:none;">
+        <div class="card-title" style="color:var(--purple-light);">📄 Breakdown</div>
+        <div id="breakdownBody" style="font-size:13px;color:var(--text-secondary);line-height:1.75;"></div>
+      </div>
+
+      <!-- IO -->
+      <div class="card" id="ioCard" style="display:none;">
+        <div class="card-title" style="color:rgba(255,255,255,0.65);">⟳ Input → Process → Output</div>
+        <div id="ioFlow"></div>
+      </div>
+
+      <!-- Constraints -->
+      <div class="card" id="constraintsCard" style="display:none;">
+        <div class="card-title" style="color:#fbbf24;">⚠️ Constraints</div>
+        <div class="c-list" id="constraintList"></div>
+        <div class="cx-row" id="complexityRow"></div>
+      </div>
+
+      <!-- ===== PICTORIAL VISUALIZATION ===== -->
+      <div class="vis-card" id="visCard" style="display:none;">
+        <div class="vis-header">
+          <div class="vis-title">🎨 Algorithm Visualization</div>
+          <div class="vis-controls">
+            <span id="visStepLabel" style="font-size:10.5px;color:var(--text-muted);font-family:var(--font-code);"></span>
+            <button class="vis-play-btn" id="visPlayBtn" onclick="playVisualization()">▶ Play</button>
+          </div>
+        </div>
+        <div class="vis-stage" id="visStage">
+          <div style="color:var(--text-muted);font-size:12px;">Hit ▶ Play to animate</div>
+        </div>
+      </div>
+
+      <!-- Hints -->
+      <div class="card" id="hintsCard" style="display:none; flex-direction:column; gap:4px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="card-title" style="color:var(--purple-light);margin-bottom:0;">💡 Hints</div>
+          <div id="modeBannerInline"></div>
+        </div>
+        <div id="hintsContainer"></div>
+      </div>
+
+      <!-- CODE REVIEW CARD -->
+      <div class="review-card" id="reviewCard" style="display:none;">
+        <div class="review-header" onclick="toggleReview()">
+          <div class="review-title">🔍 Review My Code</div>
+          <span class="review-toggle-icon" id="reviewChev">▼</span>
+        </div>
+        <div class="review-body" id="reviewBody">
+          <textarea class="review-input" id="reviewInput"
+            placeholder="Paste your attempt here...
+
+Example (C++):
+int main() {
+  int n; cin >> n;
+  // your solution
+}"></textarea>
+          <button class="review-run-btn" onclick="runReview()">
+            🔬 <span id="reviewBtnText">Analyze My Code</span>
+          </button>
+          <div id="reviewResults" style="display:none;flex-direction:column;gap:14px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<!-- SAMPLES DATA -->
+<script>
+const SAMPLES = {
+  array:`Given an array of N integers (both positive and negative), find the maximum sum of any contiguous subarray.
+
+Input Format:
+First line contains N, the number of elements.
+Second line contains N space-separated integers.
+
+Output Format:
+Print a single integer - the maximum subarray sum.
+
+Sample Input:
+6
+-2 1 -3 4 -1 2
+
+Sample Output:
+5
+
+Constraints:
+1 ≤ N ≤ 10^5
+-10^4 ≤ arr[i] ≤ 10^4`,
+
+  string:`Given a string S, reverse only the vowels in the string while keeping all other characters in their original position.
+
+Input Format:
+A single string S consisting of lowercase and uppercase letters.
+
+Output Format:
+Print the modified string with reversed vowels.
+
+Sample Input:
+hello world
+
+Sample Output:
+hollo werld
+
+Constraints:
+1 ≤ |S| ≤ 10^5`,
+
+  dp:`You are given coins of different denominations and a total amount. Find the minimum number of coins needed to make up that amount. If no combination is possible, return -1.
+
+Input Format:
+First line: N (number of coin types), Amount
+Second line: N space-separated coin denominations
+
+Output Format:
+Print the minimum number of coins, or -1 if not possible.
+
+Sample Input:
+3 11
+1 5 6
+
+Sample Output:
+2
+
+Constraints:
+1 ≤ N ≤ 12
+1 ≤ coins[i] ≤ 1000
+0 ≤ amount ≤ 10^4`,
+
+  graph:`Given an undirected graph with N nodes and M edges, find the shortest path (in terms of number of edges) from source node S to destination node D.
+
+Input Format:
+First line: N M
+Next M lines: u v
+Last line: S D
+
+Output Format:
+Print the minimum number of edges, or -1 if unreachable.
+
+Sample Input:
+5 6
+1 2
+1 3
+2 4
+3 4
+4 5
+2 5
+1 5
+
+Sample Output:
+2
+
+Constraints:
+1 ≤ N ≤ 10^4
+1 ≤ M ≤ 10^5`,
+
+  twoptr:`Given a sorted array of N integers and a target value X, find if any two numbers in the array sum to X. Print "YES" if found, "NO" otherwise.
+
+Input Format:
+First line: N X
+Second line: N sorted integers
+
+Output Format:
+YES or NO
+
+Sample Input:
+5 9
+1 2 4 5 7
+
+Sample Output:
+YES
+
+Constraints:
+2 ≤ N ≤ 10^6
+-10^9 ≤ arr[i] ≤ 10^9`,
+
+  sort:`You are given N students with their scores. Find the rank of a student using binary search after sorting.
+
+Input Format:
+First line: N Q
+Second line: N scores
+Next Q lines: one score per query
+
+Output Format:
+For each query, print the rank (1-indexed) or "Not Found".
+
+Sample Input:
+5 2
+85 70 90 60 95
+90
+80
+
+Sample Output:
+2
+Not Found
+
+Constraints:
+1 ≤ N, Q ≤ 10^5
+0 ≤ score ≤ 100`
+};
+</script>
+
+<!-- TYPES DATABASE -->
+<script>
+const TYPES = {
+  dp: {
+    label:'Dynamic Programming', icon:'🔷',
+    color:'#a78bfa', bgColor:'rgba(167,139,250,0.1)', borderColor:'rgba(167,139,250,0.3)',
+    desc:'Overlapping subproblems + optimal substructure. Build answer from smaller pieces.',
+    keywords:['minimum','maximum','count ways','combinations','minimum coins','longest','subsequence','subset','knapsack','dp','memoization','tabulation','coin change','partition'],
+    approach:'Define dp[i] = answer for subproblem of size i. Fill bottom-up using a recurrence relation.',
+    dataStruct:{'cpp':'vector<int> dp(n+1, INT_MAX). Base case dp[0]=0. 2D: vector<vector<int>>.','c':'int dp[MAX+1]; init to INT_MAX. Base case dp[0]=0. Use int arrays.','java':'int[] dp = new int[amount+1]; fill with MAX_VALUE. dp[0]=0.'},
+    hintCode:
+`// DP skeleton
+vector<int> dp(amount + 1, INT_MAX);
+dp[0] = 0; // base case
+for (int i = 1; i <= amount; i++)
+    for (auto& c : coins)
+        if (c <= i && dp[i-c] != INT_MAX)
+            dp[i] = min(dp[i], dp[i-c] + 1);
+// result: dp[amount]`,
+    hintCodeC:
+`/* DP skeleton in C */
+int dp[10001];
+memset(dp, 0x3f, sizeof(dp)); // INT_MAX-ish
+dp[0] = 0;
+for (int i = 1; i <= amount; i++)
+    for (int j = 0; j < n; j++)
+        if (coins[j] <= i && dp[i-coins[j]] != 0x3f3f3f3f)
+            dp[i] = dp[i] < dp[i-coins[j]]+1 ? dp[i] : dp[i-coins[j]]+1;
+// result: dp[amount]`,
+    hintCodeJava:
+`// DP skeleton in Java
+int[] dp = new int[amount + 1];
+Arrays.fill(dp, Integer.MAX_VALUE);
+dp[0] = 0;
+for (int i = 1; i <= amount; i++)
+    for (int c : coins)
+        if (c <= i && dp[i-c] != Integer.MAX_VALUE)
+            dp[i] = Math.min(dp[i], dp[i-c] + 1);
+// result: dp[amount]`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+
+int solve(vector<int>& coins, int amount) {
+    vector<int> dp(amount + 1, INT_MAX);
+    dp[0] = 0;
+    for (int i = 1; i <= amount; i++)
+        for (int c : coins)
+            if (c <= i && dp[i-c] != INT_MAX)
+                dp[i] = min(dp[i], dp[i-c] + 1);
+    return dp[amount] == INT_MAX ? -1 : dp[amount];
+}
+
+int main() {
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int n, amount; cin >> n >> amount;
+    vector<int> coins(n);
+    for (int& x : coins) cin >> x;
+    cout << solve(coins, amount) << endl;
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <string.h>
+#include <limits.h>
+#define MAX 10001
+
+int main() {
+    int n, amount;
+    scanf("%d %d", &n, &amount);
+    int coins[12];
+    for (int i=0;i<n;i++) scanf("%d",&coins[i]);
+
+    int dp[MAX];
+    for(int i=0;i<=amount;i++) dp[i]=INT_MAX;
+    dp[0]=0;
+
+    for(int i=1;i<=amount;i++)
+        for(int j=0;j<n;j++)
+            if(coins[j]<=i && dp[i-coins[j]]!=INT_MAX)
+                if(dp[i-coins[j]]+1 < dp[i])
+                    dp[i]=dp[i-coins[j]]+1;
+
+    printf("%d\n", dp[amount]==INT_MAX ? -1 : dp[amount]);
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class CoinChange {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt(), amount = sc.nextInt();
+        int[] coins = new int[n];
+        for (int i=0;i<n;i++) coins[i]=sc.nextInt();
+
+        int[] dp = new int[amount + 1];
+        Arrays.fill(dp, Integer.MAX_VALUE);
+        dp[0] = 0;
+
+        for (int i=1;i<=amount;i++)
+            for (int c : coins)
+                if (c<=i && dp[i-c]!=Integer.MAX_VALUE)
+                    dp[i] = Math.min(dp[i], dp[i-c]+1);
+
+        System.out.println(dp[amount]==Integer.MAX_VALUE ? -1 : dp[amount]);
+    }
+}`,
+    pseudoHint:['dp[0]=0, rest=∞','For each i: try each coin → dp[i]=min(dp[i], dp[i-coin]+1)','Answer: dp[amount]'],
+    pseudoFull:['Read n, amount, coins[]','Init dp[amount+1]=MAX; dp[0]=0','Double loop: i 1→amount, inner over coins','dp[i] = min(dp[i], dp[i-coin]+1) if valid','Return dp[amount]==MAX ? -1 : dp[amount]'],
+    timeComplexity:'O(N × Amount)', spaceComplexity:'O(Amount)',
+    visType:'dp'
+  },
+  graph: {
+    label:'Graph / BFS', icon:'🕸️',
+    color:'#818cf8', bgColor:'rgba(129,140,248,0.1)', borderColor:'rgba(129,140,248,0.3)',
+    desc:'Graph traversal — BFS finds shortest unweighted paths level by level.',
+    keywords:['graph','node','edge','path','bfs','dfs','shortest','connected','cycle','tree','adjacency','neighbor','visited','queue','reach','source','destination'],
+    approach:'BFS with a queue. Push source, mark dist[src]=0, expand neighbors level by level.',
+    dataStruct:'vector<vector<int>> adj(n+1). vector<int> dist(n+1,-1). queue<int>.',
+    hintCode:
+`// BFS core (C++)
+vector<int> dist(n+1, -1);
+queue<int> q;
+dist[src] = 0; q.push(src);
+while (!q.empty()) {
+    int u = q.front(); q.pop();
+    for (int v : adj[u])
+        if (dist[v]==-1) { dist[v]=dist[u]+1; q.push(v); }
+}
+// result: dist[dest]`,
+    hintCodeC:
+`/* BFS core in C — use arrays as adj list */
+int dist[10001]; int q[10001], front=0, rear=0;
+memset(dist,-1,sizeof(dist));
+dist[src]=0; q[rear++]=src;
+while(front<rear){
+    int u=q[front++];
+    for(int i=head[u];i;i=nxt[i]){
+        int v=to[i];
+        if(dist[v]==-1){dist[v]=dist[u]+1;q[rear++]=v;}
+    }
+}
+// result: dist[dest]`,
+    hintCodeJava:
+`// BFS core in Java
+int[] dist = new int[n+1];
+Arrays.fill(dist, -1);
+Queue<Integer> q = new LinkedList<>();
+dist[src] = 0; q.offer(src);
+while (!q.isEmpty()) {
+    int u = q.poll();
+    for (int v : adj.get(u))
+        if (dist[v]==-1) { dist[v]=dist[u]+1; q.offer(v); }
+}
+// result: dist[dest]`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int n, m; cin >> n >> m;
+    vector<vector<int>> adj(n+1);
+    for (int i=0;i<m;i++) {
+        int u,v; cin>>u>>v;
+        adj[u].push_back(v); adj[v].push_back(u);
+    }
+    int src, dest; cin >> src >> dest;
+    vector<int> dist(n+1,-1);
+    queue<int> q;
+    dist[src]=0; q.push(src);
+    while(!q.empty()) {
+        int u=q.front(); q.pop();
+        for(int v:adj[u])
+            if(dist[v]==-1){ dist[v]=dist[u]+1; q.push(v); }
+    }
+    cout << dist[dest] << endl;
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <string.h>
+#define MAXN 10001
+#define MAXM 200001
+
+int head[MAXN],to[MAXM],nxt[MAXM],cnt=0;
+int dist[MAXN],q[MAXN];
+
+void addEdge(int u,int v){
+    to[++cnt]=v; nxt[cnt]=head[u]; head[u]=cnt;
+}
+
+int main(){
+    int n,m; scanf("%d%d",&n,&m);
+    for(int i=0;i<m;i++){
+        int u,v; scanf("%d%d",&u,&v);
+        addEdge(u,v); addEdge(v,u);
+    }
+    int src,dest; scanf("%d%d",&src,&dest);
+    memset(dist,-1,sizeof(dist));
+    int front=0,rear=0;
+    dist[src]=0; q[rear++]=src;
+    while(front<rear){
+        int u=q[front++];
+        for(int i=head[u];i;i=nxt[i]){
+            int v=to[i];
+            if(dist[v]==-1){dist[v]=dist[u]+1;q[rear++]=v;}
+        }
+    }
+    printf("%d\n",dist[dest]);
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class BFS {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n=sc.nextInt(), m=sc.nextInt();
+        List<List<Integer>> adj = new ArrayList<>();
+        for(int i=0;i<=n;i++) adj.add(new ArrayList<>());
+        for(int i=0;i<m;i++){
+            int u=sc.nextInt(),v=sc.nextInt();
+            adj.get(u).add(v); adj.get(v).add(u);
+        }
+        int src=sc.nextInt(), dest=sc.nextInt();
+        int[] dist = new int[n+1];
+        Arrays.fill(dist,-1);
+        Queue<Integer> q = new LinkedList<>();
+        dist[src]=0; q.offer(src);
+        while(!q.isEmpty()){
+            int u=q.poll();
+            for(int v:adj.get(u))
+                if(dist[v]==-1){dist[v]=dist[u]+1;q.offer(v);}
+        }
+        System.out.println(dist[dest]);
+    }
+}`,
+    pseudoHint:['Build adjacency list','dist[src]=0, push src to queue','BFS: for each neighbor, set dist+1 if unvisited'],
+    pseudoFull:['Read n,m; build adj list','Read src and dest','Init dist[]=-1; dist[src]=0','BFS loop until queue empty','Print dist[dest]'],
+    timeComplexity:'O(V + E)', spaceComplexity:'O(V + E)',
+    visType:'graph'
+  },
+  array: {
+    label:'Array / Kadane\'s', icon:'📊',
+    color:'#a78bfa', bgColor:'rgba(167,139,250,0.1)', borderColor:'rgba(167,139,250,0.3)',
+    desc:'Kadane\'s algorithm scans once, tracking running sum vs global maximum. O(N) time.',
+    keywords:['array','subarray','contiguous','maximum sum','minimum sum','prefix','suffix','element','index','subarray sum','kadane'],
+    approach:'One pass: curSum = max(arr[i], curSum+arr[i]). Update maxSum at each step.',
+    dataStruct:'vector<int> arr. Two int variables: curSum and maxSum only. O(1) extra space.',
+    hintCode:
+`// Kadane's core
+int cur = arr[0], mx = arr[0];
+for (int i = 1; i < n; i++) {
+    cur = max(arr[i], cur + arr[i]);
+    mx  = max(mx, cur);
+}
+// result: mx`,
+    hintCodeC:
+`/* Kadane's in C */
+int cur = arr[0], mx = arr[0];
+for (int i = 1; i < n; i++) {
+    cur = cur+arr[i] > arr[i] ? cur+arr[i] : arr[i];
+    mx  = mx > cur ? mx : cur;
+}
+// result: mx`,
+    hintCodeJava:
+`// Kadane's in Java
+int cur = arr[0], mx = arr[0];
+for (int i = 1; i < n; i++) {
+    cur = Math.max(arr[i], cur + arr[i]);
+    mx  = Math.max(mx, cur);
+}
+// result: mx`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+int main() {
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int n; cin >> n;
+    vector<int> arr(n);
+    for (int& x : arr) cin >> x;
+    int cur=arr[0], mx=arr[0];
+    for(int i=1;i<n;i++){
+        cur=max(arr[i],cur+arr[i]);
+        mx=max(mx,cur);
+    }
+    cout<<mx<<endl;
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#define MAX 100001
+
+int main(){
+    int n; scanf("%d",&n);
+    int arr[MAX];
+    for(int i=0;i<n;i++) scanf("%d",&arr[i]);
+    int cur=arr[0], mx=arr[0];
+    for(int i=1;i<n;i++){
+        cur = cur+arr[i]>arr[i] ? cur+arr[i] : arr[i];
+        mx  = mx>cur ? mx : cur;
+    }
+    printf("%d\n",mx);
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class Kadane {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int[] arr = new int[n];
+        for(int i=0;i<n;i++) arr[i]=sc.nextInt();
+        int cur=arr[0], mx=arr[0];
+        for(int i=1;i<n;i++){
+            cur = Math.max(arr[i], cur+arr[i]);
+            mx  = Math.max(mx, cur);
+        }
+        System.out.println(mx);
+    }
+}`,
+    pseudoHint:['cur = mx = arr[0]','cur = max(arr[i], cur+arr[i])','mx = max(mx, cur)'],
+    pseudoFull:['Read n, fill arr[]','Init cur=mx=arr[0]','Loop i=1 to n-1','cur=max(arr[i],cur+arr[i])','mx=max(mx,cur); print mx'],
+    timeComplexity:'O(N)', spaceComplexity:'O(1)',
+    visType:'array'
+  },
+  string: {
+    label:'String / Two Pointer', icon:'🔤',
+    color:'#f0abfc', bgColor:'rgba(240,171,252,0.09)', borderColor:'rgba(240,171,252,0.28)',
+    desc:'Two pointer on string — left and right converge, swapping target characters.',
+    keywords:['string','character','vowel','palindrome','reverse','anagram','substring','pattern','uppercase','lowercase','frequency','count','replace'],
+    approach:'Two-pointer: left=0, right=end. Skip non-targets from each end, swap targets, converge.',
+    dataStruct:'std::string with two int indices (l, r). Lambda for isVowel check.',
+    hintCode:
+`// Two-pointer shell (C++)
+int l=0, r=s.size()-1;
+while (l < r) {
+    while (l<r && !isVowel(s[l])) l++;
+    while (l<r && !isVowel(s[r])) r--;
+    if (l<r) { swap(s[l++], s[r--]); }
+}`,
+    hintCodeC:
+`/* Two-pointer string in C */
+int l=0, r=strlen(s)-1;
+while(l<r){
+    while(l<r && !isVowel(s[l])) l++;
+    while(l<r && !isVowel(s[r])) r--;
+    if(l<r){char t=s[l];s[l++]=s[r];s[r--]=t;}
+}`,
+    hintCodeJava:
+`// Two-pointer in Java
+char[] ch = s.toCharArray();
+int l=0, r=ch.length-1;
+while(l<r){
+    while(l<r && !isVowel(ch[l])) l++;
+    while(l<r && !isVowel(ch[r])) r--;
+    if(l<r){char t=ch[l];ch[l++]=ch[r];ch[r--]=t;}
+}`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+bool isVowel(char c){
+    c=tolower(c);
+    return c=='a'||c=='e'||c=='i'||c=='o'||c=='u';
+}
+int main(){
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    string s; getline(cin,s);
+    int l=0,r=s.size()-1;
+    while(l<r){
+        while(l<r&&!isVowel(s[l]))l++;
+        while(l<r&&!isVowel(s[r]))r--;
+        if(l<r)swap(s[l++],s[r--]);
+    }
+    cout<<s<<endl;
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+int isVowel(char c){
+    c=tolower(c);
+    return c=='a'||c=='e'||c=='i'||c=='o'||c=='u';
+}
+
+int main(){
+    char s[100001];
+    fgets(s,sizeof(s),stdin);
+    int n=strlen(s);
+    if(s[n-1]=='\n') s[--n]='\0';
+    int l=0,r=n-1;
+    while(l<r){
+        while(l<r&&!isVowel(s[l]))l++;
+        while(l<r&&!isVowel(s[r]))r--;
+        if(l<r){char t=s[l];s[l++]=s[r];s[r--]=t;}
+    }
+    printf("%s\n",s);
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class ReverseVowels {
+    static boolean isVowel(char c){
+        return "aeiouAEIOU".indexOf(c)>=0;
+    }
+    public static void main(String[] args){
+        Scanner sc=new Scanner(System.in);
+        char[] ch=sc.nextLine().toCharArray();
+        int l=0,r=ch.length-1;
+        while(l<r){
+            while(l<r&&!isVowel(ch[l]))l++;
+            while(l<r&&!isVowel(ch[r]))r--;
+            if(l<r){char t=ch[l];ch[l++]=ch[r];ch[r--]=t;}
+        }
+        System.out.println(new String(ch));
+    }
+}`,
+    pseudoHint:['l=0, r=end','Skip non-vowels from both ends','Swap s[l] and s[r], then l++, r--'],
+    pseudoFull:['Read string (getline/nextLine/fgets)','isVowel() helper','l=0, r=size-1 loop','Advance l to next vowel, r to prev vowel','Swap and move pointers; print result'],
+    timeComplexity:'O(N)', spaceComplexity:'O(1)',
+    visType:'string'
+  },
+  twoptr: {
+    label:'Two Pointers', icon:'👆',
+    color:'#c4b5fd', bgColor:'rgba(196,181,253,0.09)', borderColor:'rgba(196,181,253,0.28)',
+    desc:'Sorted array + two indices from opposite ends eliminates O(N²) brute force.',
+    keywords:['two sum','pair','sorted','target sum','left','right','pointer','sum equals','find pair'],
+    approach:'Sort if needed. left=0, right=n-1. Move based on sum vs target.',
+    dataStruct:'Two int indices on sorted vector<int>. O(1) extra space.',
+    hintCode:
+`// Two-pointer (C++) — sorted array
+int l=0, r=arr.size()-1;
+while (l < r) {
+    int s = arr[l]+arr[r];
+    if (s==target) { /* found */ break; }
+    else if (s < target) l++;
+    else r--;
+}`,
+    hintCodeC:
+`/* Two-pointer in C */
+int l=0, r=n-1;
+while(l<r){
+    int s=arr[l]+arr[r];
+    if(s==target) break; // found
+    else if(s<target) l++;
+    else r--;
+}`,
+    hintCodeJava:
+`// Two-pointer in Java
+int l=0, r=arr.length-1;
+while(l<r){
+    int s=arr[l]+arr[r];
+    if(s==target) break; // found
+    else if(s<target) l++;
+    else r--;
+}`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+int main(){
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int n,target; cin>>n>>target;
+    vector<int> arr(n);
+    for(int& x:arr) cin>>x;
+    // sort(arr.begin(),arr.end());
+    int l=0,r=n-1; bool found=false;
+    while(l<r){
+        int s=arr[l]+arr[r];
+        if(s==target){found=true;break;}
+        else if(s<target)l++; else r--;
+    }
+    cout<<(found?"YES":"NO")<<endl;
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <stdlib.h>
+
+int cmp(const void*a,const void*b){return *(int*)a-*(int*)b;}
+
+int main(){
+    int n,target; scanf("%d%d",&n,&target);
+    int arr[1000001];
+    for(int i=0;i<n;i++) scanf("%d",&arr[i]);
+    // qsort(arr,n,sizeof(int),cmp);
+    int l=0,r=n-1,found=0;
+    while(l<r){
+        int s=arr[l]+arr[r];
+        if(s==target){found=1;break;}
+        else if(s<target)l++; else r--;
+    }
+    printf("%s\n",found?"YES":"NO");
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class TwoSum {
+    public static void main(String[] args){
+        Scanner sc=new Scanner(System.in);
+        int n=sc.nextInt(),target=sc.nextInt();
+        int[] arr=new int[n];
+        for(int i=0;i<n;i++) arr[i]=sc.nextInt();
+        // Arrays.sort(arr);
+        int l=0,r=n-1; boolean found=false;
+        while(l<r){
+            int s=arr[l]+arr[r];
+            if(s==target){found=true;break;}
+            else if(s<target)l++; else r--;
+        }
+        System.out.println(found?"YES":"NO");
+    }
+}`,
+    pseudoHint:['l=0, r=n-1','sum<target → l++; sum>target → r--','sum==target → YES'],
+    pseudoFull:['Read n, target; fill arr (sort if needed)','l=0, r=n-1, found=false','While l<r: compute sum, move pointer','If sum==target: found=true, break','Print YES or NO'],
+    timeComplexity:'O(N log N + N)', spaceComplexity:'O(1)',
+    visType:'twoptr'
+  },
+  sort: {
+    label:'Sort + Binary Search', icon:'🔢',
+    color:'#a5b4fc', bgColor:'rgba(165,180,252,0.09)', borderColor:'rgba(165,180,252,0.28)',
+    desc:'Sort first O(N log N), then binary search for O(log N) per query.',
+    keywords:['sort','rank','binary search','search','find','upper bound','lower bound','sorted order','ascending','descending','rank','query'],
+    approach:'Sort array. Use lower_bound() (STL binary search) for each query in O(log N).',
+    dataStruct:'vector<int> + sort() + lower_bound(). No extras needed.',
+    hintCode:
+`// After sorting (C++):
+sort(v.begin(), v.end());
+auto it = lower_bound(v.begin(), v.end(), val);
+if (it==v.end() || *it!=val) // not found
+else rank = (int)(v.end() - it); // 1-indexed`,
+    hintCodeC:
+`/* Binary search in C */
+qsort(arr, n, sizeof(int), cmp);
+int lo=0, hi=n-1, rank=-1;
+while(lo<=hi){
+    int mid=(lo+hi)/2;
+    if(arr[mid]==val){rank=n-mid; break;}
+    else if(arr[mid]<val) lo=mid+1;
+    else hi=mid-1;
+}`,
+    hintCodeJava:
+`// Binary search in Java
+Arrays.sort(sc);
+int idx = Arrays.binarySearch(sc, val);
+if(idx < 0) // not found
+else rank = sc.length - idx; // 1-indexed`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+int main(){
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int n,q; cin>>n>>q;
+    vector<int> sc(n);
+    for(int& x:sc) cin>>x;
+    sort(sc.begin(),sc.end());
+    while(q--){
+        int v; cin>>v;
+        auto it=lower_bound(sc.begin(),sc.end(),v);
+        if(it==sc.end()||*it!=v) cout<<"Not Found\n";
+        else cout<<(sc.end()-it)<<"\n";
+    }
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <stdlib.h>
+#define MAXN 100001
+
+int cmp(const void*a,const void*b){return *(int*)a-*(int*)b;}
+
+int bsearch(int*arr,int n,int val){
+    int lo=0,hi=n-1;
+    while(lo<=hi){
+        int mid=(lo+hi)/2;
+        if(arr[mid]==val) return n-mid;
+        else if(arr[mid]<val) lo=mid+1;
+        else hi=mid-1;
+    }
+    return -1;
+}
+
+int main(){
+    int n,q; scanf("%d%d",&n,&q);
+    int sc[MAXN];
+    for(int i=0;i<n;i++) scanf("%d",&sc[i]);
+    qsort(sc,n,sizeof(int),cmp);
+    while(q--){
+        int v; scanf("%d",&v);
+        int rank=bsearch(sc,n,v);
+        if(rank==-1) printf("Not Found\n");
+        else printf("%d\n",rank);
+    }
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class BinarySearch {
+    public static void main(String[] args){
+        Scanner sc=new Scanner(System.in);
+        int n=sc.nextInt(),q=sc.nextInt();
+        int[] scores=new int[n];
+        for(int i=0;i<n;i++) scores[i]=sc.nextInt();
+        Arrays.sort(scores);
+        while(q-->0){
+            int v=sc.nextInt();
+            int idx=Arrays.binarySearch(scores,v);
+            if(idx<0) System.out.println("Not Found");
+            else System.out.println(scores.length-idx);
+        }
+    }
+}`,
+    pseudoHint:['Sort scores ascending','Binary search for val','rank = n - foundIndex (1-indexed)'],
+    pseudoFull:['Read n,q; fill scores[]','sort() ascending','For each query: binary search','If not found → "Not Found"','Else print rank = n - index'],
+    timeComplexity:'O(N log N + Q log N)', spaceComplexity:'O(N)',
+    visType:'sort'
+  },
+  general: {
+    label:'General / Mixed', icon:'⚙️',
+    color:'#94a3b8', bgColor:'rgba(148,163,184,0.09)', borderColor:'rgba(148,163,184,0.25)',
+    desc:'No specific pattern detected. A clean C++ template to get you started.',
+    keywords:[],
+    approach:'Re-read carefully. Map constraints to O() — N≤10⁴ allows O(N²), N≤10⁶ needs O(N log N).',
+    dataStruct:{'cpp':'vector, map, unordered_map, queue, stack — choose by constraint.','c':'int arrays, manual stack/queue with head/tail pointers.','java':'ArrayList, HashMap, LinkedList, ArrayDeque — Java Collections.'},
+    hintCode:
+`// General C++ starter
+int n; cin >> n;
+vector<int> arr(n);
+for (int& x : arr) cin >> x;
+// TODO: your logic`,
+    hintCodeC:
+`/* General C starter */
+int n; scanf("%d",&n);
+int arr[100001];
+for(int i=0;i<n;i++) scanf("%d",&arr[i]);
+// TODO: your logic`,
+    hintCodeJava:
+`// General Java starter
+Scanner sc = new Scanner(System.in);
+int n = sc.nextInt();
+int[] arr = new int[n];
+for(int i=0;i<n;i++) arr[i]=sc.nextInt();
+// TODO: your logic`,
+    fullCode:
+`#include <bits/stdc++.h>
+using namespace std;
+#define ll long long
+#define vi vector<int>
+
+void solve() {
+    int n; cin >> n;
+    vi arr(n);
+    for (int& x : arr) cin >> x;
+    // TODO: implement
+}
+
+int main() {
+    ios_base::sync_with_stdio(false); cin.tie(NULL);
+    int t=1;
+    // cin>>t; // multiple test cases
+    while(t--) solve();
+}`,
+    fullCodeC:
+`#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAXN 100001
+
+void solve(){
+    int n; scanf("%d",&n);
+    int arr[MAXN];
+    for(int i=0;i<n;i++) scanf("%d",&arr[i]);
+    // TODO: implement
+}
+
+int main(){
+    int t=1;
+    // scanf("%d",&t);
+    while(t--) solve();
+    return 0;
+}`,
+    fullCodeJava:
+`import java.util.*;
+
+public class Solution {
+    static Scanner sc = new Scanner(System.in);
+
+    static void solve(){
+        int n = sc.nextInt();
+        int[] arr = new int[n];
+        for(int i=0;i<n;i++) arr[i]=sc.nextInt();
+        // TODO: implement
+    }
+
+    public static void main(String[] args){
+        int t=1;
+        // t = sc.nextInt();
+        while(t-->0) solve();
+    }
+}`,
+    pseudoHint:['Read input carefully','Think brute force first','Match N to expected complexity'],
+    pseudoFull:['Use appropriate template for your language','Read all inputs first','Pick algorithm by constraint size','Output with newline for speed'],
+    timeComplexity:'Depends on approach', spaceComplexity:'Depends on structures',
+    visType:'general'
+  }
+};
+
+let currentMode = 'hint';
+let currentLang = 'cpp';
+let currentType = null;
+let currentTypeKey = 'general';
+let visInterval = null;
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('modeHint').classList.toggle('active', m==='hint');
+  document.getElementById('modeFull').classList.toggle('active', m==='full');
+  if (currentType && document.getElementById('analysisResult').style.display !== 'none')
+    renderHints(currentType);
+}
+
+function setLang(l) {
+  currentLang = l;
+  ['Cpp','C','Java','Py'].forEach(x => {
+    document.getElementById('lang'+x).classList.toggle('active', l===x.toLowerCase());
+  });
+  if (currentType && document.getElementById('analysisResult').style.display !== 'none')
+    renderHints(currentType);
+}
+
+const PY = {
+  array: {
+    hint:
+`# Kadane's core (Python)
+cur = mx = arr[0]
+for i in range(1, n):
+    cur = max(arr[i], cur + arr[i])
+    mx  = max(mx, cur)
+# result: mx`,
+    full:
+`n = int(input())
+arr = list(map(int, input().split()))
+cur = mx = arr[0]
+for i in range(1, n):
+    cur = max(arr[i], cur + arr[i])
+    mx  = max(mx, cur)
+print(mx)`
+  },
+  dp: {
+    hint:
+`# DP skeleton (Python)
+dp = [float('inf')] * (amount + 1)
+dp[0] = 0
+for i in range(1, amount + 1):
+    for c in coins:
+        if c <= i and dp[i-c] != float('inf'):
+            dp[i] = min(dp[i], dp[i-c] + 1)
+# result: dp[amount]`,
+    full:
+`n, amount = map(int, input().split())
+coins = list(map(int, input().split()))
+dp = [float('inf')] * (amount + 1)
+dp[0] = 0
+for i in range(1, amount + 1):
+    for c in coins:
+        if c <= i and dp[i-c] != float('inf'):
+            dp[i] = min(dp[i], dp[i-c] + 1)
+print(-1 if dp[amount] == float('inf') else dp[amount])`
+  },
+  graph: {
+    hint:
+`# BFS core (Python)
+from collections import deque
+dist = [-1] * (n + 1)
+q = deque([src])
+dist[src] = 0
+while q:
+    u = q.popleft()
+    for v in adj[u]:
+        if dist[v] == -1:
+            dist[v] = dist[u] + 1
+            q.append(v)
+# result: dist[dest]`,
+    full:
+`from collections import defaultdict, deque
+import sys
+input = sys.stdin.readline
+
+n, m = map(int, input().split())
+adj = defaultdict(list)
+for _ in range(m):
+    u, v = map(int, input().split())
+    adj[u].append(v); adj[v].append(u)
+src, dest = map(int, input().split())
+
+dist = [-1] * (n + 1)
+dist[src] = 0
+q = deque([src])
+while q:
+    u = q.popleft()
+    for v in adj[u]:
+        if dist[v] == -1:
+            dist[v] = dist[u] + 1
+            q.append(v)
+print(dist[dest])`
+  },
+  string: {
+    hint:
+`# Two-pointer string (Python)
+VOWELS = set('aeiouAEIOU')
+ch = list(s)
+l, r = 0, len(ch) - 1
+while l < r:
+    while l < r and ch[l] not in VOWELS: l += 1
+    while l < r and ch[r] not in VOWELS: r -= 1
+    if l < r:
+        ch[l], ch[r] = ch[r], ch[l]
+        l += 1; r -= 1`,
+    full:
+`VOWELS = set('aeiouAEIOU')
+s = input()
+ch = list(s)
+l, r = 0, len(ch) - 1
+while l < r:
+    while l < r and ch[l] not in VOWELS: l += 1
+    while l < r and ch[r] not in VOWELS: r -= 1
+    if l < r:
+        ch[l], ch[r] = ch[r], ch[l]
+        l += 1; r -= 1
+print(''.join(ch))`
+  },
+  twoptr: {
+    hint:
+`# Two-pointer (Python)
+l, r = 0, len(arr) - 1
+while l < r:
+    s = arr[l] + arr[r]
+    if s == target: break   # found
+    elif s < target: l += 1
+    else: r -= 1`,
+    full:
+`n, target = map(int, input().split())
+arr = list(map(int, input().split()))
+# arr.sort()  # if unsorted
+l, r = 0, n - 1
+found = False
+while l < r:
+    s = arr[l] + arr[r]
+    if s == target: found = True; break
+    elif s < target: l += 1
+    else: r -= 1
+print("YES" if found else "NO")`
+  },
+  sort: {
+    hint:
+`# Binary search (Python)
+import bisect
+scores.sort()
+idx = bisect.bisect_left(scores, val)
+if idx < len(scores) and scores[idx] == val:
+    rank = len(scores) - idx  # 1-indexed`,
+    full:
+`import bisect
+import sys
+input = sys.stdin.readline
+
+n, q = map(int, input().split())
+scores = list(map(int, input().split()))
+scores.sort()
+for _ in range(q):
+    v = int(input())
+    idx = bisect.bisect_left(scores, v)
+    if idx < len(scores) and scores[idx] == v:
+        print(len(scores) - idx)
+    else:
+        print("Not Found")`
+  },
+  general: {
+    hint:
+`# General Python starter
+n = int(input())
+arr = list(map(int, input().split()))
+# TODO: your logic`,
+    full:
+`import sys
+input = sys.stdin.readline
+
+def solve():
+    n = int(input())
+    arr = list(map(int, input().split()))
+    # TODO: implement
+
+t = 1
+# t = int(input())
+for _ in range(t):
+    solve()`
+  }
+};
+
+function getLangCode(type, isHint) {
+  if (currentLang==='py') {
+    const k = currentTypeKey;
+    const py = PY[k];
+    if (py) return isHint ? py.hint : py.full;
+  }
+  if (isHint) {
+    if (currentLang==='c')    return type.hintCodeC    || type.hintCode;
+    if (currentLang==='java') return type.hintCodeJava || type.hintCode;
+    return type.hintCode;
+  } else {
+    if (currentLang==='c')    return type.fullCodeC    || type.fullCode;
+    if (currentLang==='java') return type.fullCodeJava || type.fullCode;
+    return type.fullCode;
+  }
+}
+
+function getLangLabel() {
+  return {cpp:'C++',c:'C',java:'Java',py:'Python'}[currentLang];
+}
+
+function getLangPrismClass() {
+  return {cpp:'language-cpp',c:'language-c',java:'language-java',py:'language-python'}[currentLang];
+}
+
+function getDataStruct(type) {
+  const ds = type.dataStruct;
+  if (typeof ds === 'object') {
+    if (currentLang==='py') return ds['py'] || ds['cpp'];
+    return ds[currentLang] || ds['cpp'];
+  }
+  return ds;
+}
+</script>
+
+<!-- VISUALIZATION ENGINE -->
+<script>
+/* ────────────────────────────────────────────────
+   VIS: ARRAY — Kadane's bar animation
+──────────────────────────────────────────────── */
+function buildArrayVis() {
+  const arr = [-2, 1, -3, 4, -1, 2, 1, -5, 4];
+  const stage = document.getElementById('visStage');
+  const maxAbs = Math.max(...arr.map(Math.abs));
+  const BASE_H = 90;
+
+  function render(idx, curSum, maxSum, maxStart, maxEnd) {
+    stage.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;">
+        <div class="scan-info">
+          <span class="scan-pill" style="background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);color:var(--purple-light);">cur: ${curSum}</span>
+          <span class="scan-pill" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);color:var(--white-hi);">max: ${maxSum}</span>
+        </div>
+        <div class="bar-container">
+          ${arr.map((v,i) => {
+            const h = Math.max(8, Math.round((Math.abs(v)/maxAbs)*BASE_H));
+            const inMax = (maxStart!==null && i>=maxStart && i<=maxEnd);
+            const isCur = (i===idx);
+            return `<div class="bar-wrap">
+              <div class="bar-val" style="color:${isCur?'var(--purple-light)':inMax?'rgba(255,255,255,0.6)':'var(--text-muted)'}">${v}</div>
+              <div class="bar ${isCur?'current':''} ${inMax&&!isCur?'max-sub':''}" style="height:${h}px;"></div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);font-family:var(--font-code);">
+          ${idx < arr.length ? `scanning index ${idx}` : '✓ done — max subarray sum = ' + maxSum}
+        </div>
+      </div>`;
+  }
+
+  let i=1, cur=arr[0], mx=arr[0], mxS=0, mxE=0, curS=0;
+  render(-1, arr[0], arr[0], 0, 0);
+
+  return function step() {
+    if (i >= arr.length) return true; // done
+    cur = Math.max(arr[i], cur+arr[i]);
+    if (cur === arr[i]) curS = i;
+    if (cur > mx) { mx = cur; mxS = curS; mxE = i; }
+    render(i, cur, mx, mxS, mxE);
+    i++;
+    return false;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: GRAPH — BFS wave
+──────────────────────────────────────────────── */
+function buildGraphVis() {
+  const stage = document.getElementById('visStage');
+  const edges = [[1,2],[1,3],[2,4],[3,4],[4,5],[2,5]];
+  const N = 5;
+  const adj = Array.from({length:N+1},()=>[]);
+  edges.forEach(([u,v])=>{ adj[u].push(v); adj[v].push(u); });
+
+  // node positions in a circle
+  const cx=200, cy=90, R=70;
+  const pos = {};
+  for(let n=1;n<=N;n++){
+    const angle = (n-1)*(2*Math.PI/N) - Math.PI/2;
+    pos[n]={x:cx+R*Math.cos(angle), y:cy+R*Math.sin(angle)};
+  }
+
+  // Colors by dist level
+  const LEVEL_COLORS = ['#8b5cf6','#a78bfa','#c4b5fd','rgba(196,181,253,0.55)','rgba(196,181,253,0.3)'];
+
+  function renderGraph(dist, visited, current) {
+    const svgEdges = edges.map(([u,v])=>`
+      <line x1="${pos[u].x}" y1="${pos[u].y}" x2="${pos[v].x}" y2="${pos[v].y}"
+        stroke="rgba(139,92,246,0.18)" stroke-width="1.5"/>
+    `).join('');
+
+    const svgNodes = Array.from({length:N},(_,i)=>i+1).map(n=>{
+      const d = dist[n];
+      const color = d>=0 ? (LEVEL_COLORS[d]||'rgba(139,92,246,0.3)') : 'rgba(255,255,255,0.05)';
+      const border = current===n ? '#fff' : (d>=0 ? LEVEL_COLORS[Math.min(d,4)] : 'rgba(139,92,246,0.2)');
+      const textCol = d===0 ? '#fff' : (d>0 ? '#fff' : 'rgba(255,255,255,0.25)');
+      return `
+        <circle cx="${pos[n].x}" cy="${pos[n].y}" r="16" fill="${color}" stroke="${border}" stroke-width="${current===n?2:1}"/>
+        ${current===n ? `<circle cx="${pos[n].x}" cy="${pos[n].y}" r="20" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>` : ''}
+        <text x="${pos[n].x}" y="${pos[n].y+4}" text-anchor="middle" font-size="11" fill="${textCol}" font-weight="600" font-family="JetBrains Mono">${n}</text>
+        ${d>=0 ? `<text x="${pos[n].x}" y="${pos[n].y+26}" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,0.4)" font-family="JetBrains Mono">d=${d}</text>` : ''}
+      `;
+    }).join('');
+
+    stage.innerHTML = `
+      <div style="width:100%;position:relative;">
+        <svg id="graphSvg" viewBox="0 0 400 180" style="width:100%;height:180px;">${svgEdges}${svgNodes}</svg>
+        <div class="vis-label">BFS from node 1 → node 5  |  src=1 (purple)  |  exploring levels</div>
+      </div>`;
+  }
+
+  const dist = Array(N+1).fill(-1);
+  const queue = [1];
+  dist[1] = 0;
+  let queueCopy = [...queue];
+
+  renderGraph(dist, {}, 1);
+
+  return function step() {
+    if (!queueCopy.length) return true;
+    const u = queueCopy.shift();
+    for(const v of adj[u]) {
+      if(dist[v]===-1) { dist[v]=dist[u]+1; queueCopy.push(v); }
+    }
+    renderGraph(dist, {}, u);
+    return queueCopy.length===0;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: DP — coin change table fill
+──────────────────────────────────────────────── */
+function buildDPVis() {
+  const stage = document.getElementById('visStage');
+  const coins = [1, 5, 6];
+  const amount = 11;
+  const dp = Array(amount+1).fill(Infinity);
+  dp[0] = 0;
+
+  let steps = [];
+  // pre-compute all steps
+  for(let i=1;i<=amount;i++) {
+    steps.push({i, snap: [...dp]});
+    for(const c of coins) {
+      if(c<=i && dp[i-c]!==Infinity) dp[i]=Math.min(dp[i],dp[i-c]+1);
+    }
+    steps.push({i, snap: [...dp], done:true});
+  }
+
+  let si = 0;
+
+  function renderDP(snap, curI) {
+    const header = Array.from({length:amount+1},(_,j)=>`<th>${j}</th>`).join('');
+    const cells  = snap.map((v,j)=>{
+      const cls = j===curI?'current-cell': (v!==Infinity?'filled':'');
+      return `<td class="${cls}">${v===Infinity?'∞':v}</td>`;
+    }).join('');
+    stage.innerHTML = `
+      <div style="width:100%;overflow-x:auto;">
+        <table class="dp-table">
+          <tr><th style="color:var(--text-muted);">idx</th>${header}</tr>
+          <tr><th style="color:var(--text-muted);">dp[]</th>${cells}</tr>
+        </table>
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);font-family:var(--font-code);text-align:center;">
+          coins=[1,5,6]  amount=11 | dp[${curI}]=${snap[curI]===Infinity?'∞':snap[curI]}
+        </div>
+      </div>`;
+  }
+
+  renderDP(dp, 0);
+
+  return function step() {
+    if(si>=steps.length) return true;
+    const {i, snap} = steps[si++];
+    renderDP(snap, i);
+    return si>=steps.length;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: STRING — vowel two-pointer
+──────────────────────────────────────────────── */
+function buildStringVis() {
+  const stage = document.getElementById('visStage');
+  const s = Array.from('hello world');
+  const isVowel = c => 'aeiouAEIOU'.includes(c);
+
+  let arr = [...s], l=0, r=arr.length-1;
+  let steps = [{arr:[...arr], l, r, note:'Initial string'}];
+
+  while(l<r) {
+    while(l<r && !isVowel(arr[l])) l++;
+    while(l<r && !isVowel(arr[r])) r--;
+    if(l<r) {
+      steps.push({arr:[...arr], l, r, note:`Swap s[${l}]='${arr[l]}' ↔ s[${r}]='${arr[r]}'`});
+      [arr[l], arr[r]] = [arr[r], arr[l]];
+      l++; r--;
+      steps.push({arr:[...arr], l, r, note:'Moved pointers inward'});
+    }
+  }
+  steps.push({arr:[...arr], l:-1, r:-1, note:'✓ Done: '+arr.join('')});
+
+  let si=0;
+  function renderStr({arr, l, r, note}) {
+    const chars = arr.map((c,i)=>{
+      const isL=i===l, isR=i===r, isV=isVowel(c);
+      return `<div class="str-char ${isL?'ptr-left':''} ${isR?'ptr-right':''} ${(!isL&&!isR&&isV)?'vowel':''}">${c===' '?'·':c}</div>`;
+    }).join('');
+    const ptrs = arr.map((_,i)=>`<div class="ptr-label">${i===l?'L':i===r?'R':''}</div>`).join('');
+    stage.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div class="str-row">${chars}</div>
+        <div class="str-ptr-row">${ptrs}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-code);margin-top:4px;">${note}</div>
+        <div style="font-size:10px;color:rgba(139,92,246,0.5);">Purple=Left ptr  |  White=Right ptr  |  Glow=Vowel</div>
+      </div>`;
+  }
+
+  renderStr(steps[0]);
+  return function step() {
+    if(si>=steps.length-1) return true;
+    renderStr(steps[++si]);
+    return si>=steps.length-1;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: TWO POINTER
+──────────────────────────────────────────────── */
+function buildTwoPtrVis() {
+  const stage = document.getElementById('visStage');
+  const arr = [1,2,4,5,7], target=9;
+  let l=0, r=arr.length-1;
+  let steps=[{l,r,note:'Start: l=0, r=4',found:false}];
+
+  while(l<r) {
+    const s=arr[l]+arr[r];
+    if(s===target){ steps.push({l,r,note:`✓ Found! arr[${l}]+arr[${r}]=${arr[l]}+${arr[r]}=${s}`,found:true}); break; }
+    else if(s<target){ steps.push({l,r,note:`${arr[l]}+${arr[r]}=${s} < ${target} → l++`}); l++; }
+    else { steps.push({l,r,note:`${arr[l]}+${arr[r]}=${s} > ${target} → r--`}); r--; }
+  }
+
+  let si=0;
+  function render({l,r,note,found}) {
+    const cells = arr.map((v,i)=>`<div class="tp-cell ${i===l?'left':''} ${i===r?'right':''} ${found&&(i===l||i===r)?'found':''}">${v}</div>`).join('');
+    stage.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-code);">target = ${target}</div>
+        <div class="tp-arr">${cells}</div>
+        <div style="font-size:11px;color:${found?'rgba(110,200,160,0.8)':'var(--text-muted)'};font-family:var(--font-code);">${note}</div>
+        <div style="font-size:10px;color:rgba(139,92,246,0.45);">Purple=Left  |  White=Right  |  Green=Found</div>
+      </div>`;
+  }
+
+  render(steps[0]);
+  return function step() {
+    if(si>=steps.length-1) return true;
+    render(steps[++si]);
+    return si>=steps.length-1;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: BINARY SEARCH
+──────────────────────────────────────────────── */
+function buildBinarySearchVis() {
+  const stage = document.getElementById('visStage');
+  const arr = [60,70,85,90,95], target=90;
+  let lo=0,hi=arr.length-1;
+  let steps=[{lo,hi,mid:-1,note:'Sorted array — searching for '+target,found:false,elim:[]}];
+  let elim=new Set();
+
+  while(lo<=hi) {
+    const mid=Math.floor((lo+hi)/2);
+    if(arr[mid]===target) { steps.push({lo,hi,mid,note:`✓ Found ${target} at index ${mid}! Rank=${arr.length-mid}`,found:true,elim:[...elim]}); break; }
+    if(arr[mid]<target) {
+      steps.push({lo,hi,mid,note:`arr[${mid}]=${arr[mid]} < ${target} → search right`,found:false,elim:[...elim]});
+      for(let i=lo;i<=mid;i++) elim.add(i);
+      lo=mid+1;
+    } else {
+      steps.push({lo,hi,mid,note:`arr[${mid}]=${arr[mid]} > ${target} → search left`,found:false,elim:[...elim]});
+      for(let i=mid;i<=hi;i++) elim.add(i);
+      hi=mid-1;
+    }
+  }
+
+  let si=0;
+  function render({lo,hi,mid,note,found,elim}) {
+    const cells = arr.map((v,i)=>{
+      const isM=i===mid, inRange=i>=lo&&i<=hi, isEl=elim.includes(i);
+      return `<div class="bs-cell ${found&&isM?'found':''} ${!found&&isM?'mid-cell':''} ${!isM&&inRange?'active-range':''} ${isEl?'eliminated':''}">${v}</div>`;
+    }).join('');
+    stage.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-code);">target = ${target}  |  lo=${lo}  mid=${mid>=0?mid:'–'}  hi=${hi}</div>
+        <div class="bs-arr">${cells}</div>
+        <div style="font-size:11px;color:${found?'rgba(110,200,160,0.8)':'var(--text-muted)'};font-family:var(--font-code);text-align:center;">${note}</div>
+        <div style="font-size:10px;color:rgba(139,92,246,0.45);">Purple=mid  |  Active range lit  |  Dimmed=eliminated</div>
+      </div>`;
+  }
+
+  render(steps[0]);
+  return function step() {
+    if(si>=steps.length-1) return true;
+    render(steps[++si]);
+    return si>=steps.length-1;
+  };
+}
+
+/* ────────────────────────────────────────────────
+   VIS: GENERAL fallback
+──────────────────────────────────────────────── */
+function buildGeneralVis() {
+  document.getElementById('visStage').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:20px;">
+      <svg width="200" height="120" viewBox="0 0 200 120">
+        <!-- Flowchart -->
+        <rect x="65" y="5" width="70" height="26" rx="5" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+        <text x="100" y="22" text-anchor="middle" font-size="10" fill="#c4b5fd" font-family="Inter">Read Input</text>
+
+        <line x1="100" y1="31" x2="100" y2="44" stroke="rgba(139,92,246,0.3)" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <polygon points="100,44 130,60 100,76 70,60" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+        <text x="100" y="64" text-anchor="middle" font-size="9" fill="#c4b5fd" font-family="Inter">Valid?</text>
+
+        <line x1="130" y1="60" x2="170" y2="60" stroke="rgba(139,92,246,0.3)" stroke-width="1.5"/>
+        <text x="152" y="55" font-size="8" fill="rgba(139,92,246,0.5)" font-family="Inter">No</text>
+        <rect x="150" y="48" width="40" height="24" rx="4" fill="rgba(255,100,100,0.08)" stroke="rgba(255,100,100,0.25)" stroke-width="1"/>
+        <text x="170" y="64" text-anchor="middle" font-size="9" fill="rgba(255,120,120,0.7)" font-family="Inter">Error</text>
+
+        <line x1="100" y1="76" x2="100" y2="89" stroke="rgba(139,92,246,0.3)" stroke-width="1.5"/>
+        <text x="107" y="71" font-size="8" fill="rgba(139,92,246,0.5)" font-family="Inter">Yes</text>
+
+        <rect x="55" y="89" width="90" height="26" rx="5" fill="rgba(139,92,246,0.15)" stroke="rgba(139,92,246,0.4)" stroke-width="1"/>
+        <text x="100" y="106" text-anchor="middle" font-size="10" fill="#c4b5fd" font-family="Inter">Process + Output</text>
+
+        <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="rgba(139,92,246,0.4)"/>
+        </marker></defs>
+      </svg>
+      <div style="font-size:11px;color:var(--text-muted);">General algorithm flowchart — identify your specific pattern</div>
+    </div>`;
+  return function step() { return true; };
+}
+
+/* ────────────────────────────────────────────────
+   PLAY CONTROLLER
+──────────────────────────────────────────────── */
+let stepFn = null;
+let isPlaying = false;
+
+function playVisualization() {
+  if (!currentType) return;
+  const btn = document.getElementById('visPlayBtn');
+
+  if (isPlaying) {
+    clearInterval(visInterval); isPlaying = false;
+    btn.textContent = '▶ Play'; return;
+  }
+
+  // build correct visualizer
+  const vt = currentType.visType;
+  if      (vt==='array')   stepFn = buildArrayVis();
+  else if (vt==='graph')   stepFn = buildGraphVis();
+  else if (vt==='dp')      stepFn = buildDPVis();
+  else if (vt==='string')  stepFn = buildStringVis();
+  else if (vt==='twoptr')  stepFn = buildTwoPtrVis();
+  else if (vt==='sort')    stepFn = buildBinarySearchVis();
+  else                     stepFn = buildGeneralVis();
+
+  isPlaying = true;
+  btn.innerHTML = '⏸ Pause';
+
+  visInterval = setInterval(() => {
+    const done = stepFn();
+    if (done) {
+      clearInterval(visInterval); isPlaying = false;
+      btn.innerHTML = '↺ Replay';
+    }
+  }, 700);
+}
+</script>
+
+<!-- RENDER ENGINE -->
+<script>
+function detectType(text) {
+  const lower = text.toLowerCase();
+  let best='general', bestScore=0;
+  for(const [key,val] of Object.entries(TYPES)) {
+    if(key==='general') continue;
+    let s=0;
+    for(const kw of val.keywords) if(lower.includes(kw)) s++;
+    if(s>bestScore){bestScore=s;best=key;}
+  }
+  currentTypeKey = best;
+  return TYPES[best];
+}
+
+function extractSection(text, label) {
+  const lines=text.split('\n');
+  const idx=lines.findIndex(l=>l.toLowerCase().includes(label.toLowerCase()));
+  if(idx===-1) return null;
+  const end=lines.findIndex((l,i)=>i>idx&&/^(input|output|sample|constraint|example|note)/i.test(l.trim()));
+  return lines.slice(idx+1,end===-1?idx+5:end).join('\n').trim()||null;
+}
+
+function extractConstraints(text) {
+  return text.split('\n')
+    .filter(l=>/[≤≥<>]=?\s*\d/.test(l)||/\d\s*[≤≥<>]=?\s*\d/.test(l)||/10\^/.test(l))
+    .map(l=>l.trim().replace(/^[*\-•]\s*/,''))
+    .filter(l=>l.length<80);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function getSummary(text) {
+  const t=text.split('\n').filter(l=>l.trim()).slice(0,3).join(' ').substring(0,200);
+  return t+(t.length>=200?'…':'');
+}
+
+function loadSample(k) { document.getElementById('problemInput').value=SAMPLES[k]; analyzeNow(); }
+
+function clearAll() {
+  clearInterval(visInterval); isPlaying=false; stepFn=null;
+  document.getElementById('problemInput').value='';
+  document.getElementById('analysisResult').style.display='none';
+  document.getElementById('emptyState').style.display='flex';
+}
+
+async function analyzeNow() {
+  const text=document.getElementById('problemInput').value.trim();
+  if(!text){showToast('⚠️ Paste a problem first','#8b5cf6');return;}
+
+  clearInterval(visInterval); isPlaying=false;
+  const btn=document.getElementById('analyzeBtn');
+  btn.disabled=true;
+  document.getElementById('btnIcon').style.display='none';
+  document.getElementById('btnText').textContent='Analyzing…';
+  document.getElementById('btnSpinner').style.display='flex';
+
+  await new Promise(r=>setTimeout(r,550));
+
+  currentType=detectType(text);
+  const cs=extractConstraints(text);
+  const inp=extractSection(text,'sample input')||extractSection(text,'input');
+  const out=extractSection(text,'sample output')||extractSection(text,'output');
+
+  renderTypeCard(currentType);
+  renderBreakdown(getSummary(text),text);
+  renderIO(inp,out);
+  renderConstraints(cs,currentType);
+  renderVisSection(currentType);
+  renderHints(currentType);
+
+  // Show review panel + reset results
+  const rc = document.getElementById('reviewCard');
+  rc.style.display = '';
+  if (!rc.classList.contains('open')) rc.classList.add('open');
+  const rr = document.getElementById('reviewResults');
+  rr.style.display = 'none'; rr.innerHTML = '';
+  document.getElementById('reviewBtnText').textContent = 'Analyze My Code';
+
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('analysisResult').style.display='flex';
+
+  btn.disabled=false;
+  document.getElementById('btnIcon').style.display='';
+  document.getElementById('btnText').textContent='Re-Analyze';
+  document.getElementById('btnSpinner').style.display='none';
+
+  showToast('✅ Analyzed!','#8b5cf6');
+}
+
+function renderTypeCard(t) {
+  const card=document.getElementById('typeCard');
+  card.style.borderColor=t.borderColor;
+  card.innerHTML=`
+    <div class="type-icon-wrap" style="background:${t.bgColor};border:1px solid ${t.borderColor};">${t.icon}</div>
+    <div class="type-info">
+      <h3 style="color:${t.color};">Detected: ${t.label}</h3>
+      <p>${t.desc}</p>
+    </div>`;
+}
+
+function renderBreakdown(summary,full) {
+  const hasIn=/input\s*(format)?:/i.test(full);
+  const hasOut=/output\s*(format)?:/i.test(full);
+  document.getElementById('breakdownBody').innerHTML=`
+    <p style="color:var(--white-hi);font-weight:500;margin-bottom:7px;">📝 Summary</p>
+    <p>${summary}</p>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;">
+      ${hasIn?`<span class="c-tag" style="background:rgba(139,92,246,0.07);border-color:rgba(139,92,246,0.22);color:var(--purple-light);">✓ Input Format</span>`:''}
+      ${hasOut?`<span class="c-tag" style="background:rgba(255,255,255,0.04);border-color:var(--white-dim);color:var(--white-mid);">✓ Output Format</span>`:''}
+      <span class="c-tag">${full.split('\n').length} lines</span>
+    </div>`;
+  document.getElementById('breakdownCard').style.display='block';
+}
+
+function renderIO(inp,out) {
+  const card=document.getElementById('ioCard');
+  if(!inp&&!out){card.style.display='none';return;}
+  document.getElementById('ioFlow').innerHTML=`
+    <div class="io-flow">
+      <div class="io-box">
+        <div class="io-box-label" style="color:var(--purple-light);">📥 Input</div>
+        <div class="io-box-val">${inp?escHtml(inp.substring(0,90)):'—'}</div>
+      </div>
+      <div class="io-arrow">⟶</div>
+      <div class="io-box">
+        <div class="io-box-label" style="color:var(--text-muted);">⚙️ Logic</div>
+        <div class="io-box-val" style="color:var(--text-muted);">Your Code</div>
+      </div>
+      <div class="io-arrow">⟶</div>
+      <div class="io-box">
+        <div class="io-box-label" style="color:var(--white-mid);">📤 Output</div>
+        <div class="io-box-val">${out?escHtml(out.substring(0,50)):'—'}</div>
+      </div>
+    </div>`;
+  card.style.display='block';
+}
+
+function renderConstraints(cs,t) {
+  const card=document.getElementById('constraintsCard');
+  if(!cs.length){card.style.display='none';return;}
+  document.getElementById('constraintList').innerHTML=cs.slice(0,7).map(c=>`<span class="c-tag">${escHtml(c)}</span>`).join('');
+  document.getElementById('complexityRow').innerHTML=`
+    <span class="cx-b" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.22);color:var(--purple-light);">⏱ ${t.timeComplexity}</span>
+    <span class="cx-b" style="background:rgba(255,255,255,0.04);border:1px solid var(--white-dim);color:var(--white-mid);">💾 ${t.spaceComplexity}</span>`;
+  card.style.display='block';
+}
+
+function renderVisSection(t) {
+  clearInterval(visInterval); isPlaying=false;
+  const btn=document.getElementById('visPlayBtn');
+  btn.innerHTML='▶ Play';
+
+  // Reset stage
+  document.getElementById('visStage').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--text-muted);">
+      <div style="font-size:28px;">🎨</div>
+      <div style="font-size:12px;">Hit ▶ Play to animate the <strong style="color:var(--purple-light);">${t.label}</strong> algorithm</div>
+    </div>`;
+
+  document.getElementById('visCard').style.display='block';
+}
+
+function renderHints(type) {
+  const isHint = currentMode==='hint';
+  const langLabel = getLangLabel();
+  const langColors = {cpp:'#3b82f6',c:'#ea580c',java:'#ca8a04'};
+  const lc = langColors[currentLang];
+
+  // Banner: hint mode + language
+  document.getElementById('modeBannerInline').innerHTML =
+    `<span style="font-size:10px;padding:3px 9px;border-radius:12px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);color:var(--purple-light);font-weight:600;">${isHint?'💡 Hint':'✅ Full'}</span>`
+  + `<span style="font-size:10px;padding:3px 9px;border-radius:12px;background:${lc}18;border:1px solid ${lc}44;color:${lc};font-weight:700;margin-left:5px;font-family:var(--font-code);">${langLabel}</span>`;
+
+  const code = getLangCode(type, isHint);
+  const prismClass = getLangPrismClass();
+  const ds = getDataStruct(type);
+
+  const hintDefs=[
+    {level:1, label:'🧭 Approach',    color:'#8b5cf6', content:`<p>${type.approach}</p>`},
+    {level:2, label:'🗂️ Data Structure', color:'#a78bfa', content:`<p>${ds}</p>`},
+    {level:3,
+     label: isHint ? `💻 ${langLabel} Skeleton` : `💻 ${langLabel} Starter Code`,
+     color:'#c4b5fd',
+     content: isHint
+       ? `<p style="font-size:11.5px;color:var(--text-muted);margin-bottom:4px;">Key lines only — fill the rest:</p><div class="mini-code">${escHtml(code)}</div>`
+       : `<pre><code class="${prismClass}">${escHtml(code)}</code></pre>`
+    },
+    {level:4,
+     label: isHint ? '📋 Key Steps' : '📋 Step-by-Step',
+     color:'rgba(255,255,255,0.65)',
+     content: isHint
+       ? `<ul class="p-list">${type.pseudoHint.map(s=>`<li><div class="p-dot"></div><span>${s}</span></li>`).join('')}</ul>`
+       : `<ul class="p-list">${type.pseudoFull.map((s,i)=>`<li><div class="p-dot" style="opacity:1;"></div><span><strong style="color:var(--white-hi);">${i+1}.</strong> ${s}</span></li>`).join('')}</ul>`
+    }
+  ];
+
+  document.getElementById('hintsContainer').innerHTML = hintDefs.map((h,idx)=>{
+    if(idx===0) return `<div class="hint-card open" id="hint-card-${h.level}">
+      <button class="hint-hbtn" onclick="toggleHint(${h.level})">
+        <div class="h-num" style="background:${h.color}18;border:1px solid ${h.color}40;color:${h.color};">${h.level}</div>
+        <span>${h.label}</span><span class="h-chev">▼</span>
+      </button>
+      <div class="hint-body">${h.content}</div>
+    </div>`;
+    const enc=encodeURIComponent(JSON.stringify(h));
+    return `<div class="hint-card" id="hint-card-${h.level}">
+      <div class="locked-row" id="hint-locked-${h.level}">
+        <span class="lock-ic">🔒</span>
+        <span>${h.label}</span>
+        <button class="reveal-btn" style="border-color:${h.color}55;color:${h.color};"
+          onclick="unlockHint(${h.level},'${enc}')">Reveal →</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('hintsCard').style.display='flex';
+  if(window.Prism) setTimeout(()=>Prism.highlightAll(),80);
+}
+
+function toggleHint(l) { document.getElementById(`hint-card-${l}`).classList.toggle('open'); }
+
+function unlockHint(l,enc) {
+  const h=JSON.parse(decodeURIComponent(enc));
+  const card=document.getElementById(`hint-card-${l}`);
+  card.innerHTML=`
+    <button class="hint-hbtn" onclick="toggleHint(${l})">
+      <div class="h-num" style="background:${h.color}18;border:1px solid ${h.color}40;color:${h.color};">${l}</div>
+      <span>${h.label}</span><span class="h-chev">▼</span>
+    </button>
+    <div class="hint-body">${h.content}</div>`;
+  card.classList.add('open');
+  if(window.Prism) setTimeout(()=>Prism.highlightAll(),50);
+}
+
+function showToast(msg,color) {
+  const old=document.querySelector('.toast'); if(old) old.remove();
+  const t=document.createElement('div');
+  t.className='toast'; t.style.borderColor=color+'55';
+  t.innerHTML=msg; document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2400);
+}
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+
+<!-- CODE REVIEW ENGINE -->
+<script>
+/* ─── pattern libraries per problem type ─── */
+const REVIEW_PATTERNS = {
+  array: {
+    approach: [
+      {re:/cur|current/i,       pts:10, msg:'Tracking current sum ✔'},
+      {re:/max|Math\.max|max\(/i, pts:10, msg:'Using max() to update ✔'},
+      {re:/for|while/i,         pts: 8, msg:'Loop present ✔'},
+      {re:/arr\[0\]|arr\[i\]/i, pts: 7, msg:'Accessing array elements ✔'},
+    ],
+    structure: [
+      {re:/vector|int\s*\[|list\s*\(|int\[\]/i, pts:10, msg:'Array/list declared ✔'},
+      {re:/int\s+cur|int\s+mx|cur\s*=|mx\s*=/, pts:10, msg:'Two tracking variables ✔'},
+      {re:/for\s*\(.*;.*;/,     pts: 5, msg:'C-style loop ✔'},
+    ],
+    antiPatterns: [
+      {re:/for.*for|while.*while/s, penalty:15, msg:'⚠️ Nested loops detected — O(N²)! Kadane\'s needs only ONE loop'},
+      {re:/sort\s*\(/,            penalty: 5, msg:'⚠️ Sorting not needed for Kadane\'s'},
+    ],
+    completeness: [
+      {re:/cin|scanf|input\s*\(|readline/i, pts:10, msg:'Reading input ✔'},
+      {re:/cout|printf|print\s*\(/i,        pts:10, msg:'Printing output ✔'},
+    ],
+    keyLines: [
+      {re:/cur.*=.*max|max.*cur/i,         status:'good', tip:'Correct curSum update'},
+      {re:/mx.*=.*max|max.*mx/i,           status:'good', tip:'Correct maxSum update'},
+      {re:/for\s*\(.*for|nested loop/i,    status:'error', tip:'❌ Nested loop: use single pass'},
+      {re:/if\s*\(.*==[^=]/i,              status:'warn',  tip:'⚠️ Possible assignment in condition (= vs ==)'},
+      {re:/INT_MAX|float\('inf'\)|Long.MAX/i, status:'warn', tip:'Edge case: all-negative arrays — Kadane\'s handles this'},
+    ]
+  },
+  dp: {
+    approach: [
+      {re:/dp\s*\[|dp\s*=/i,   pts:15, msg:'dp[] array declared ✔'},
+      {re:/dp\[0\]\s*=\s*0/,   pts:10, msg:'Base case dp[0]=0 set ✔'},
+      {re:/min\s*\(|Math\.min|INT_MAX|inf/i, pts: 8, msg:'Tracking minimum ✔'},
+      {re:/for.*for|for.*in.*for.*in/si, pts: 8, msg:'Nested loop for recurrence ✔'},
+    ],
+    structure: [
+      {re:/vector.*INT_MAX|fill.*MAX|float.*inf/i, pts:10, msg:'Initialized to MAX ✔'},
+      {re:/dp\[i\s*-/i,        pts:10, msg:'Using recurrence dp[i-coin] ✔'},
+    ],
+    antiPatterns: [
+      {re:/dp\[0\]\s*=\s*[^0]/, penalty:15, msg:'❌ Base case should be dp[0]=0, not another value'},
+      {re:/dp\[i\+/i,          penalty:10, msg:'⚠️ dp[i+coin] — should be dp[i-coin] (going backwards)'},
+    ],
+    completeness: [
+      {re:/cin|scanf|input\s*\(/i, pts:10, msg:'Reading input ✔'},
+      {re:/cout|printf|print/i,    pts:10, msg:'Printing output ✔'},
+    ],
+    keyLines: [
+      {re:/dp\[0\]\s*=\s*0/,         status:'good',  tip:'Base case set correctly'},
+      {re:/=.*INT_MAX|fill.*inf/i,   status:'good',  tip:'dp initialized to max'},
+      {re:/dp\[i-/i,                 status:'good',  tip:'Correct recurrence direction'},
+      {re:/dp\[i\+/i,                status:'error', tip:'❌ dp[i+coin] should be dp[i-coin]'},
+      {re:/dp\[0\]\s*=[^\s0]/,       status:'error', tip:'❌ Base case must be dp[0]=0'},
+    ]
+  },
+  graph: {
+    approach: [
+      {re:/queue|deque|Queue/i,      pts:15, msg:'Queue for BFS ✔'},
+      {re:/dist|visited/i,           pts:10, msg:'Distance/visited tracking ✔'},
+      {re:/adj|adjacen|graph/i,      pts: 8, msg:'Adjacency structure ✔'},
+      {re:/push|offer|append/i,      pts: 7, msg:'Enqueue operation ✔'},
+    ],
+    structure: [
+      {re:/dist\[.*\]\s*=\s*-1|fill.*-1/i, pts:10, msg:'Distances initialized to -1 ✔'},
+      {re:/dist\[src\]\s*=\s*0/,           pts:10, msg:'Source distance set to 0 ✔'},
+    ],
+    antiPatterns: [
+      {re:/stack|Stack/i,           penalty:15, msg:'⚠️ Stack used instead of Queue — gives DFS not BFS'},
+      {re:/visited.*bool|bool.*visited/i, penalty: 0, msg:'ℹ️ Using bool visited[] works, but int dist[] gives distance directly'},
+    ],
+    completeness: [
+      {re:/cin|scanf|input/i,  pts:10, msg:'Reading input ✔'},
+      {re:/cout|printf|print/i, pts:10, msg:'Printing output ✔'},
+    ],
+    keyLines: [
+      {re:/queue|deque/i,              status:'good',  tip:'Using queue for BFS ✓'},
+      {re:/dist\[src\]\s*=\s*0/i,     status:'good',  tip:'Source initialized correctly'},
+      {re:/stack/i,                    status:'error', tip:'❌ Stack gives DFS, not BFS for shortest path'},
+      {re:/if\s*\(!?visited|dist.*==\s*-1/i, status:'good', tip:'Unvisited check present'},
+    ]
+  },
+  string: {
+    approach: [
+      {re:/l\s*=\s*0|left\s*=\s*0/,    pts:10, msg:'Left pointer initialized ✔'},
+      {re:/r\s*=|right\s*=/,           pts:10, msg:'Right pointer initialized ✔'},
+      {re:/vowel|aeiou/i,              pts:10, msg:'Vowel check present ✔'},
+      {re:/swap|ch\[l\].*ch\[r\]/i,   pts:10, msg:'Swap operation ✔'},
+    ],
+    structure: [
+      {re:/while\s*\(l\s*<\s*r|while.*left.*right/i, pts:10, msg:'Converging while loop ✔'},
+      {re:/l\+\+|left\+\+/,           pts: 5, msg:'Left pointer advances ✔'},
+      {re:/r--|right--/,              pts: 5, msg:'Right pointer retreats ✔'},
+    ],
+    antiPatterns: [
+      {re:/for\s*\(.*for|reverse.*vowel.*/si, penalty: 5, msg:'ℹ️ Hint: collect vowels separately and reverse — but two-pointer is more efficient'},
+    ],
+    completeness: [
+      {re:/getline|input\s*\(|readline|nextLine/i, pts:10, msg:'Reading full string ✔'},
+      {re:/cout|printf|print/i,                   pts:10, msg:'Printing output ✔'},
+    ],
+    keyLines: [
+      {re:/vowel|aeiou/i,              status:'good', tip:'Vowel check found'},
+      {re:/swap\(|,\s*=.*,/i,         status:'good', tip:'Swap operation found'},
+      {re:/l\s*<\s*r|left.*<.*right/i, status:'good', tip:'Two-pointer while condition'},
+      {re:/cin\s*>>/,                  status:'warn', tip:'⚠️ cin>> stops at space — use getline() for strings with spaces'},
+    ]
+  },
+  twoptr: {
+    approach: [
+      {re:/l\s*=\s*0|left\s*=\s*0/,    pts:12, msg:'Left pointer at 0 ✔'},
+      {re:/r\s*=.*n.*1|right.*n.*1/i,  pts:12, msg:'Right pointer at n-1 ✔'},
+      {re:/target|sum/i,               pts: 8, msg:'Target comparison present ✔'},
+    ],
+    structure: [
+      {re:/while\s*\(l\s*<\s*r|while.*left.*<.*right/i, pts:12, msg:'Convergence loop ✔'},
+      {re:/l\+\+|left\+\+/,           pts: 8, msg:'Left advance ✔'},
+      {re:/r--|right--/,              pts: 8, msg:'Right retreat ✔'},
+    ],
+    antiPatterns: [
+      {re:/for.*for/si, penalty:15, msg:'❌ Nested loops = O(N²). Two-pointer is O(N) after sort!'},
+      {re:/map|unordered_map|HashMap|dict/i, penalty: 0, msg:'ℹ️ HashMap also works in O(N) but uses O(N) space'},
+    ],
+    completeness: [
+      {re:/sort|sorted/i,    pts:10, msg:'Sort step present ✔'},
+      {re:/YES|NO|found/i,   pts:10, msg:'Found/not-found output ✔'},
+    ],
+    keyLines: [
+      {re:/for.*for/si,               status:'error', tip:'❌ O(N²) — use two pointers instead'},
+      {re:/sort/i,                    status:'good',  tip:'Sorting the array first ✓'},
+      {re:/l\s*<\s*r|left.*<.*right/i,status:'good',  tip:'Correct two-pointer condition'},
+      {re:/target|==.*target/i,       status:'good',  tip:'Target match check present'},
+    ]
+  },
+  sort: {
+    approach: [
+      {re:/sort/i,                          pts:15, msg:'Sort step ✔'},
+      {re:/binary|lower_bound|bisect|binarySearch/i, pts:15, msg:'Binary search used ✔'},
+      {re:/lo|hi|mid|left|right|l.*r/i,    pts: 8, msg:'Search range variables ✔'},
+    ],
+    structure: [
+      {re:/while.*lo.*hi|while.*lo.*<=.*hi/i, pts:12, msg:'Binary search loop ✔'},
+      {re:/mid.*=.*\(.*\+.*\).*\/\s*2/i,   pts: 8, msg:'Mid calculation ✔'},
+    ],
+    antiPatterns: [
+      {re:/for.*for/si, penalty:10, msg:'❌ Linear scan = O(N) per query. Use binary search O(log N)!'},
+      {re:/\(lo\+hi\)/,   penalty: 8, msg:'⚠️ (lo+hi)/2 can overflow. Use lo+(hi-lo)/2'},
+    ],
+    completeness: [
+      {re:/Not Found|not found|-1/i, pts:10, msg:'Not-found case handled ✔'},
+      {re:/rank|end.*it|length.*idx/i, pts:10, msg:'Rank calculation present ✔'},
+    ],
+    keyLines: [
+      {re:/sort/i,                      status:'good', tip:'Array sorted first ✓'},
+      {re:/\(lo\+hi\)/,                 status:'warn', tip:'⚠️ Overflow risk: use lo+(hi-lo)/2'},
+      {re:/lower_bound|bisect|Arrays.binarySearch/i, status:'good', tip:'Using built-in binary search ✓'},
+      {re:/while.*<=/i,                  status:'good', tip:'Binary search while condition'},
+    ]
+  },
+  general: {
+    approach: [
+      {re:/for|while/i,          pts:10, msg:'Loop structure ✔'},
+      {re:/if|else/i,            pts: 5, msg:'Conditional logic ✔'},
+      {re:/function|void|def |int main/i, pts: 8, msg:'Function defined ✔'},
+    ],
+    structure: [
+      {re:/int|vector|list|array/i, pts:10, msg:'Data structure declared ✔'},
+    ],
+    antiPatterns: [],
+    completeness: [
+      {re:/cin|scanf|input/i,  pts:15, msg:'Input reading ✔'},
+      {re:/cout|printf|print/i, pts:15, msg:'Output printing ✔'},
+    ],
+    keyLines: [
+      {re:/TODO|// your|#your/i, status:'warn', tip:'⚠️ TODO placeholder — fill in your logic'},
+    ]
+  }
+};
+
+/* ─── syntax checks (language-aware) ─── */
+function syntaxCheck(lines, lang) {
+  const issues = [];
+  let braces=0, brackets=0, parens=0;
+  lines.forEach((line, i) => {
+    const ln = i+1;
+    const t = line.trim();
+    if (!t || t.startsWith('//') || t.startsWith('#') || t.startsWith('*')) return;
+
+    // brace counting
+    for (const c of line) {
+      if (c==='{') braces++; else if (c==='}') braces--;
+      if (c==='[') brackets++; else if (c===']') brackets--;
+      if (c==='(') parens++;  else if (c===')') parens--;
+    }
+
+    // C/C++/Java: missing semicolon on statement lines
+    if (['cpp','c','java'].includes(lang)) {
+      if (t && !t.endsWith(';') && !t.endsWith('{') && !t.endsWith('}') &&
+          !t.endsWith(',') && !t.startsWith('//') && !t.startsWith('#') &&
+          /^(int|long|float|double|string|auto|bool|char|vector|queue|stack|return|cout|cin|printf|scanf|for|while|if|else)/.test(t) &&
+          !/for\s*\(/.test(t) && !/if\s*\(/.test(t) && !/while\s*\(/.test(t) && !/else/.test(t)) {
+        if (!/[;{}\/]$/.test(t)) {
+          issues.push({ln, type:'warn', msg:`Line ${ln}: Possible missing semicolon`});
+        }
+      }
+    }
+
+    // assignment in condition
+    if (/if\s*\([^=!<>]+=[^=]/.test(line) && !/==/g.test(line.split('(')[1]||'')) {
+      issues.push({ln, type:'warn', msg:`Line ${ln}: Assignment (=) in if condition? Did you mean == ?`});
+    }
+
+    // magic numbers
+    if (/10000000|1e9|1000000000/.test(line) && !/INT_MAX|LLONG_MAX|Long\.MAX|float\('inf'\)/i.test(line)) {
+      issues.push({ln, type:'info', msg:`Line ${ln}: Consider using INT_MAX / float('inf') instead of magic numbers`});
+    }
+
+    // Python-specific
+    if (lang==='py') {
+      if (/^\s*(if|for|while|def|class|else|elif|try|except).*[^:]$/.test(t)) {
+        issues.push({ln, type:'error', msg:`Line ${ln}: Missing colon ':' at end of block statement`});
+      }
+    }
+  });
+
+  if (braces !== 0) issues.push({ln:null, type:'error', msg:`Unbalanced braces {} — ${braces>0?'missing':Math.abs(braces)+' extra'} closing brace(s)`});
+  if (parens !== 0) issues.push({ln:null, type:'warn',  msg:`Unbalanced parentheses () — check your conditions/function calls`});
+  return issues;
+}
+
+/* ─── main review function ─── */
+function toggleReview() {
+  const card = document.getElementById('reviewCard');
+  card.classList.toggle('open');
+}
+
+function runReview() {
+  const code = document.getElementById('reviewInput').value.trim();
+  if (!code) { showToast('⚠️ Paste your code first', '#f472b6'); return; }
+  if (!currentType) { showToast('⚠️ Analyze a problem first', '#f472b6'); return; }
+
+  const btn = document.getElementById('reviewBtnText');
+  btn.textContent = 'Analyzing...';
+
+  setTimeout(() => {
+    const key = currentTypeKey;
+    const pat = REVIEW_PATTERNS[key] || REVIEW_PATTERNS.general;
+    const lines = code.split('\n');
+    const lower = code.toLowerCase();
+
+    // ── Score approach (0-40)
+    let approachScore = 0;
+    const approachGood = [], approachMiss = [];
+    for (const p of pat.approach) {
+      if (p.re.test(code)) { approachScore += p.pts; approachGood.push(p.msg); }
+      else approachMiss.push('Missing: ' + p.msg.replace(' \u2714', ''));
+    }
+    approachScore = Math.min(40, approachScore);
+
+    // ── Score structure (0-30)
+    let structScore = 0;
+    const structGood = [], structMiss = [];
+    for (const p of pat.structure||[]) {
+      if (p.re.test(code)) { structScore += p.pts; structGood.push(p.msg); }
+      else structMiss.push('Missing: ' + p.msg.replace(' \u2714', ''));
+    }
+    structScore = Math.min(30, structScore);
+
+    // ── Score completeness (0-30)
+    let compScore = 0;
+    const compGood = [], compMiss = [];
+    for (const p of pat.completeness||[]) {
+      if (p.re.test(code)) { compScore += p.pts; compGood.push(p.msg); }
+      else compMiss.push('Missing: ' + p.msg.replace(' \u2714', ''));
+    }
+    compScore = Math.min(30, compScore);
+
+    // ── Anti-patterns (penalties)
+    let penalty = 0;
+    const antiIssues = [];
+    for (const p of pat.antiPatterns||[]) {
+      if (p.re.test(code)) { penalty += p.penalty; antiIssues.push(p.msg); }
+    }
+
+    // ── Syntax issues
+    const syntaxIssues = syntaxCheck(lines, currentLang);
+
+    // ── Total
+    let total = approachScore + structScore + compScore - penalty;
+    total = Math.max(0, Math.min(100, total));
+
+    // ── Annotate lines
+    const annotatedLines = lines.map((line, i) => {
+      let status = 'neutral';
+      let tip = '';
+      for (const kl of pat.keyLines||[]) {
+        if (kl.re.test(line)) { status = kl.status; tip = kl.tip; break; }
+      }
+      // syntax overrides
+      const syErr = syntaxIssues.find(s => s.ln === i+1);
+      if (syErr) { status = syErr.type === 'error' ? 'error' : (syErr.type === 'warn' ? 'warn' : status); tip = syErr.msg || tip; }
+      return { line, status, tip };
+    });
+
+    renderReviewResults(total, approachScore, structScore, compScore, annotatedLines, approachGood, approachMiss, antiIssues, syntaxIssues, compGood, compMiss);
+    btn.textContent = 'Re-Analyze';
+  }, 400);
+}
+
+function renderReviewResults(total, appr, struc, comp, annotLines, apprGood, apprMiss, antiIssues, syntaxIssues, compGood, compMiss) {
+  const res = document.getElementById('reviewResults');
+  res.style.display = 'flex';
+
+  const color = total >= 75 ? '#22c55e' : total >= 45 ? '#fbbf24' : '#ef4444';
+  const r = 38, circ = 2*Math.PI*r;
+  const dash = (total/100)*circ;
+  const emoji = total >= 85 ? '🏆' : total >= 70 ? '✅' : total >= 45 ? '⚡' : '🔄';
+
+  // all issues combined
+  const allIssues = [
+    ...apprGood.map(m => ({type:'good', msg:m})),
+    ...antiIssues.map(m => ({type: m.includes('❌')?'err':'wrn', msg:m})),
+    ...syntaxIssues.slice(0,5).map(s => ({type:s.type==='error'?'err':s.type==='warn'?'wrn':'info', msg:s.msg})),
+    ...apprMiss.slice(0,3).map(m => ({type:'info', msg:m})),
+    ...compMiss.slice(0,2).map(m => ({type:'wrn', msg:m})),
+  ];
+
+  res.innerHTML = `
+    <!-- Score ring -->
+    <div class="score-section">
+      <div class="score-ring-wrap">
+        <svg width="88" height="88" viewBox="0 0 88 88">
+          <circle cx="44" cy="44" r="${r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+          <circle cx="44" cy="44" r="${r}" fill="none" stroke="${color}" stroke-width="8"
+            stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+            stroke-linecap="round" style="transition:stroke-dasharray 0.9s ease;"/>
+        </svg>
+        <div class="score-ring-center">
+          <div class="score-pct" style="color:${color};">${total}%</div>
+          <div class="score-pct-label">${emoji} match</div>
+        </div>
+      </div>
+      <div class="score-breakdown">
+        <div class="score-bar-row">
+          <div class="score-bar-label"><span>Approach</span><span style="color:${appr>=30?'#86efac':'#fde68a'}">${appr}/40</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${(appr/40)*100}%;background:#8b5cf6;"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-label"><span>Structure</span><span style="color:${struc>=20?'#86efac':'#fde68a'}">${struc}/30</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${(struc/30)*100}%;background:#a78bfa;"></div></div>
+        </div>
+        <div class="score-bar-row">
+          <div class="score-bar-label"><span>Completeness</span><span style="color:${comp>=20?'#86efac':'#fde68a'}">${comp}/30</span></div>
+          <div class="score-bar-track"><div class="score-bar-fill" style="width:${(comp/30)*100}%;background:#c4b5fd;"></div></div>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;">
+          ${total>=75?'Great work! Almost there 🔥':total>=45?'Good start — review the hints below':'Keep going — check the approach hint first'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues -->
+    ${allIssues.length ? `
+    <div>
+      <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Feedback</div>
+      <div class="issue-list">${allIssues.map(is=>`
+        <div class="issue-item ${is.type}">
+          <span class="issue-icon">${is.type==='err'?'❌':is.type==='wrn'?'⚠️':is.type==='good'?'✅':'💡'}</span>
+          <span>${is.msg}</span>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <!-- Annotated code -->
+    <div>
+      <div style="font-size:10.5px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        Annotated Code <span style="font-weight:400;opacity:0.5;">(hover line for tip)</span>
+      </div>
+      <div class="annot-code">${annotLines.map((al,i)=>{
+        const cls = al.status==='good'?'good':al.status==='error'?'error':al.status==='warn'?'warn':'';
+        return `<div class="annot-line ${cls}" title="${al.tip?al.tip:''}">
+          <div class="ln">${i+1}</div>
+          <div class="lc ${cls}">${escHtml(al.line)||'&nbsp;'}</div>
+        </div>`;
+      }).join('')}</div>
+    </div>
+  `;
+}
+</script>
+
+</body>
+</html>
