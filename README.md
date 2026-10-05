@@ -6,6 +6,16 @@ Live demo: open `index.html` in any browser — no build step, no API keys, 100%
 
 ![Empty state — paste a problem](docs/screenshots/home-empty.png)
 
+## 🔗 Access it on GitHub
+
+Repo: **https://github.com/aarush11tumbagi-source/cpp-problem-visualizer**
+
+```bash
+git clone https://github.com/aarush11tumbagi-source/cpp-problem-visualizer.git
+```
+
+Or open the link → `Code` → `Open with GitHub Desktop` / `Download ZIP` → open `index.html`. The README, screenshots, and workflow diagram render right on the repo homepage.
+
 ---
 
 ## ✨ What it does
