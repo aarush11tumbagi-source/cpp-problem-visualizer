@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="980" viewBox="0 0 860 980" font-family="Inter, Segoe UI, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d0a1a"/>
+      <stop offset="1" stop-color="#07050f"/>
+    </linearGradient>
+    <linearGradient id="purple" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8b5cf6"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#6ec8a0"/>
+    </marker>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="860" height="980" rx="24" fill="url(#bg)"/>
+  <text x="430" y="52" text-anchor="middle" font-size="26" font-weight="800" fill="#ede9fe">C++ Problem Visualizer — Workflow</text>
+  <text x="430" y="76" text-anchor="middle" font-size="13" fill="#9580c4">PASTE · ANALYZE · VISUALIZE · SOLVE</text>
+
+  <!-- nodes -->
+  <g font-size="14" font-weight="700">
+    <!-- 1 paste -->
+    <rect x="280" y="105" width="300" height="64" rx="14" fill="#8b5cf6" filter="url(#glow)"/>
+    <text x="430" y="130" text-anchor="middle" fill="#fff">📋 1. Paste C++ Problem</text>
+    <text x="430" y="150" text-anchor="middle" font-size="11" font-weight="400" fill="#ede9fe">statement + I/O + constraints</text>
+
+    <!-- 2 mode -->
+    <rect x="280" y="195" width="300" height="64" rx="14" fill="#1e1b33" stroke="#8b5cf6" stroke-width="2"/>
+    <text x="430" y="220" text-anchor="middle" fill="#c4b5fd">⚙️ 2. Choose Mode + Language</text>
+    <text x="430" y="240" text-anchor="middle" font-size="11" font-weight="400" fill="#9580c4">Hint / Full · C++ · C · Java · Python</text>
+
+    <!-- 3 detect -->
+    <rect x="230" y="285" width="400" height="72" rx="14" fill="#312e81" stroke="#a78bfa" stroke-width="2"/>
+    <text x="430" y="312" text-anchor="middle" fill="#fff">🔍 3. Auto-Detect Problem Type</text>
+    <text x="430" y="333" text-anchor="middle" font-size="11" font-weight="400" fill="#ddd6fe">Array · String · DP · Graph · Two-Ptr · Binary Search · General</text>
+
+    <!-- branches row -->
+    <g font-size="11" font-weight="600">
+      <rect x="60" y="385" width="140" height="44" rx="10" fill="rgba(139,92,246,0.15)" stroke="#8b5cf6"/>
+      <text x="130" y="411" text-anchor="middle" fill="#c4b5fd">📊 Breakdown</text>
+      <rect x="215" y="385" width="140" height="44" rx="10" fill="rgba(96,165,250,0.14)" stroke="#60a5fa"/>
+      <text x="285" y="411" text-anchor="middle" fill="#bfdbfe">🔄 Input→Output</text>
+      <rect x="370" y="385" width="140" height="44" rx="10" fill="rgba(251,191,36,0.13)" stroke="#fbbf24"/>
+      <text x="440" y="411" text-anchor="middle" fill="#fde68a">⚠️ Constraints</text>
+      <rect x="525" y="385" width="140" height="44" rx="10" fill="rgba(110,200,160,0.13)" stroke="#6ec8a0"/>
+      <text x="595" y="411" text-anchor="middle" fill="#a7f3d0">⏱ Complexity</text>
+      <rect x="680" y="385" width="120" height="44" rx="10" fill="rgba(244,114,182,0.13)" stroke="#f472b6"/>
+      <text x="740" y="411" text-anchor="middle" fill="#fbcfe8">🎯 Type Card</text>
+    </g>
+
+    <!-- 5 vis -->
+    <rect x="230" y="460" width="400" height="72" rx="14" fill="url(#purple)"/>
+    <text x="430" y="487" text-anchor="middle" fill="#fff">🎬 4. Animated Visualization</text>
+    <text x="430" y="508" text-anchor="middle" font-size="11" font-weight="400" fill="#ede9fe">Kadane bars · BFS wave · DP table · Two pointers · Play / Step</text>
+
+    <!-- 6 hints -->
+    <rect x="230" y="560" width="400" height="72" rx="14" fill="#1e1b33" stroke="#6ec8a0" stroke-width="2"/>
+    <text x="430" y="587" text-anchor="middle" fill="#a7f3d0">💡 5. Progressive Hints (Locked → Reveal)</text>
+    <text x="430" y="608" text-anchor="middle" font-size="11" font-weight="400" fill="#9580c4">Approach → Data Structure → Code Skeleton → Key Steps</text>
+
+    <!-- 7 review -->
+    <rect x="230" y="660" width="400" height="72" rx="14" fill="#1e1b33" stroke="#f472b6" stroke-width="2"/>
+    <text x="430" y="687" text-anchor="middle" fill="#fbcfe8">🔎 6. Review My Code</text>
+    <text x="430" y="708" text-anchor="middle" font-size="11" font-weight="400" fill="#9580c4">paste attempt → static checks → score + feedback</text>
+
+    <!-- 8 solved -->
+    <rect x="280" y="760" width="300" height="64" rx="32" fill="#065f46" stroke="#6ec8a0" stroke-width="2"/>
+    <text x="430" y="787" text-anchor="middle" fill="#fff">✅ 7. Understand &amp; Solve</text>
+    <text x="430" y="807" text-anchor="middle" font-size="11" font-weight="400" fill="#a7f3d0">thinking process, not just answer</text>
+  </g>
+
+  <!-- arrows -->
+  <g stroke="#8b5cf6" stroke-width="2.5" fill="none">
+    <line x1="430" y1="169" x2="430" y2="195" marker-end="url(#arrow)"/>
+    <line x1="430" y1="259" x2="430" y2="285" marker-end="url(#arrow)"/>
+    <line x1="430" y1="357" x2="430" y2="385" marker-end="url(#arrow)"/>
+    <line x1="430" y1="429" x2="430" y2="460" marker-end="url(#arrow)"/>
+    <line x1="430" y1="532" x2="430" y2="560" marker-end="url(#arrow)"/>
+    <line x1="430" y1="632" x2="430" y2="660" marker-end="url(#arrow)"/>
+    <line x1="430" y1="732" x2="430" y2="760" marker-end="url(#arrowGreen)" stroke="#6ec8a0"/>
+  </g>
+
+  <!-- side legend -->
+  <g font-size="12">
+    <rect x="60" y="860" width="740" height="80" rx="12" fill="rgba(139,92,246,0.06)" stroke="rgba(139,92,246,0.25)"/>
+    <circle cx="90" cy="890" r="8" fill="#8b5cf6"/>
+    <text x="105" y="894" fill="#ede9fe">Input / Visualize</text>
+    <circle cx="270" cy="890" r="8" fill="#60a5fa"/>
+    <text x="285" y="894" fill="#ede9fe">Parse</text>
+    <circle cx="360" cy="890" r="8" fill="#fbbf24"/>
+    <text x="375" y="894" fill="#ede9fe">Constraints</text>
+    <circle cx="490" cy="890" r="8" fill="#6ec8a0"/>
+    <text x="505" y="894" fill="#ede9fe">Hints / Solve</text>
+    <circle cx="630" cy="890" r="8" fill="#f472b6"/>
+    <text x="645" y="894" fill="#ede9fe">Code Review</text>
+    <text x="430" y="922" text-anchor="middle" font-size="11" fill="#9580c4">100% client-side · single index.html · no build · no API keys</text>
+  </g>
+</svg>
